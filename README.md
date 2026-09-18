@@ -110,12 +110,19 @@ A equipe só sobe o bruto na pasta do Drive que já usa; o resto anda sozinho at
 1. **Pasta de brutos do professor** (Shared Drive Lançamentos; Jaylton: `… > 08. Vídeos brutos > Bancada`,
    id `1vew1VlJ1ExEd9Te0lnvSIoWzWfO4UPQ1`). Quem grava solta o bruto ali. Pablo e André entram no `robo.json`
    quando tiverem a pasta deles.
-2. **Robô** (`robo/robo.mjs`, no Mac do Gustavo) — a cada 2 min lista a pasta, baixa o bruto novo, abre a
-   Bancada publicada num WebKit sem tela (mudo, nome «Robô»), espera a mesa, exporta e sobe o MP4 na subpasta
-   **`Em revisão`** da própria pasta de brutos. O nome do editado segue a cadeia do Playbook: **o do bruto sem
-   o `BR-`** (`BR-inventários rentáveis.MOV` → `inventários rentáveis.mp4`). O projeto fica salvo com `fluxo`
-   na etapa **Revisão do editor**. Instalar como LaunchAgent: `sh robo/instalar.sh` (log em
-   `~/Library/Logs/Bancada/robo.log`). Subir um bruto sem abrir o Drive: `node robo/robo.mjs --subir <arquivo> <professor>`.
+2. **Robô na nuvem, sem depender de Mac nenhum.** Dois pedaços: o **vigia** (`vigia/`, Cloudflare Worker com
+   cron a cada 5 min, grátis) olha a pasta de brutos e a lista de projetos; se há bruto sem projeto ou mesa
+   pedindo render novo, dispara o **robô** no GitHub Actions (`.github/workflows/robo.yml`, repo privado
+   `AlascaSA/bancada`, minutos grátis como a Central usa). O robô (`robo/robo.mjs`) baixa o bruto, abre a
+   Bancada publicada no Google Chrome do runner (sem tela, mudo, nome «Robô», codecs por software), espera a
+   mesa, exporta, converte o áudio para AAC com o ffmpeg (o Chrome no Linux só codifica Opus) e sobe o MP4 na
+   subpasta **`Em revisão`** da própria pasta de brutos. Nome do editado pela cadeia do Playbook: **o do bruto
+   sem o `BR-`** (`BR-inventários rentáveis.MOV` → `inventários rentáveis.mp4`). Projeto salvo com `fluxo` na
+   etapa **Revisão do editor**; se o render falhar, o cartão mostra «o robô falhou» com o motivo, e apagar o
+   cartão faz ele tentar de novo. Uma volta por vez (`concurrency: robo`). O mesmo robô roda em qualquer máquina
+   (`node robo/robo.mjs --uma-vez`, WebKit no Mac); `robo/instalar.sh` continua existindo para quem quiser um
+   Mac sempre ligado, mas não é o caminho principal. Subir um bruto sem abrir o Drive:
+   `node robo/robo.mjs --subir <arquivo> <professor>`.
 3. **Revisão do editor** — o cartão mostra a etapa; clicar abre o **visualizador** (o MP4 vem do Drive pelo
    servidor, sem precisar dos brutos) com «Marcar como revisado», «Copiar link para a revisão» e «Abrir a mesa
    para ajustar» (o bruto também vem do Drive, pelo botão «Baixar o bruto do Drive»). Mudou a mesa depois do
@@ -142,9 +149,12 @@ Servidor: `functions/_drive.js` + `functions/api/drive/[[path]].js` (stream com 
 `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REFRESH_TOKEN` (mesmo app OAuth da Dublagem, conta gu.costa.mendes,
 que é membro do Shared Drive; `sh robo/segredos.sh` grava os três). A pasta de entrega vai dentro do projeto
 (`fluxo.entrega.pastaId`, escrita pelo robô a partir do `robo.json`). O `serve.py` emula tudo com os tokens de
-`~/.claude/.google`. Config do robô: `~/Library/Application Support/Bancada/robo.json`
-(`{site, profs:{jaylton:{nome, brutos, prontos}}}`). Testes: `tools/teste-revisao-ui.mjs` (visualizador,
-etapas, link, mesa do Drive, «por quê», regras) e `tools/teste-robo.mjs` (rerender, entrega, limpeza).
+`~/.claude/.google`. Pastas por professor: `robo/pastas.json` (commitado; `~/Library/Application Support/Bancada/robo.json`
+manda se existir) e a var `PROFS` do `vigia/wrangler.toml` — os dois precisam bater. Segredos: no GitHub
+(`sh robo/segredos-github.sh`: os três do Drive) e no Worker (`sh vigia/segredos.sh`: os três + `GH_TOKEN`, o do
+`gh` da conta AlascaSA, que dispara o workflow); depois `cd vigia && npx wrangler deploy`. Testes:
+`tools/teste-revisao-ui.mjs` (visualizador, etapas, link, mesa do Drive, «por quê», regras), `tools/teste-robo.mjs`
+(rerender, entrega, limpeza) e o workflow `teste-linux.yml` (prova o Chrome do runner editando e exportando).
 
 ## Limites desta versão
 

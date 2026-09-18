@@ -1,0 +1,7 @@
+{
+  "name": "bancada",
+  "private": true,
+  "type": "module",
+  "description": "Bancada: edição simples no navegador + robô que edita os brutos do Drive e passa pela revisão",
+  "dependencies": { "playwright": "^1.63.0" }
+}

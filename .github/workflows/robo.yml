@@ -21,8 +21,11 @@ jobs:
         with:
           node-version: 22
 
-      - name: Instalar o robô (sem baixar navegador; usa o Google Chrome do runner)
-        run: cd robo && npm install --no-audit --no-fund
+      - name: Garantir ffmpeg
+        run: ffmpeg -version >/dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+
+      - name: Instalar o Playwright (sem baixar navegador; usa o Google Chrome do runner)
+        run: npm install --no-audit --no-fund
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
 
