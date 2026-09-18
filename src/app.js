@@ -1269,7 +1269,7 @@ function vigiarProjetosNovos() {
     if (E.fase !== 'vazio' || Date.now() - t0 > 25 * 60e3) { clearInterval(vigiaRoboId); vigiaRoboId = null; return; }
     await desenharProjetos();
     if ([...document.querySelectorAll('.projeto')].some(a => !antes.has(a.dataset.id) && a.querySelector('.etapa-chip'))) { clearInterval(vigiaRoboId); vigiaRoboId = null; estadoRobo('o robô terminou: projeto novo na lista.', 'ok'); }
-  }, 20000);
+  }, 60000);   // cada volta é 1 list no KV (1.000/dia grátis)
 }
 function ligarRobo() { $('#btRobo').addEventListener('click', rodarRoboAgora); }
 // regras do professor («não faz isso», «faz sempre isso»)

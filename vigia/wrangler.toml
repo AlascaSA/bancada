@@ -5,7 +5,7 @@ main = "index.js"
 compatibility_date = "2025-06-01"
 
 [triggers]
-crons = ["*/5 * * * *"]
+crons = ["*/15 * * * *"]   # 15 min: cada volta gasta 1 list do KV (1.000/dia grátis); urgência é o botão «Rodar o robô agora»
 
 [vars]
 BANCADA_SITE = "https://bancada-6x9.pages.dev"

@@ -15,13 +15,14 @@ export async function onRequest({ request, env, params }) {
   const kv = env.PROJETOS, partes = params.path || [], m = request.method, url = new URL(request.url);
   if (!partes.length) {
     if (m !== 'GET') return json({ erro: 'método' }, 405);
-    const prof = url.searchParams.get('professor') || '';
-    if (!PROF.test(prof)) return json({ erro: 'professor' }, 400);
+    // professor=todos → uma listagem só (o vigia usa: list é 1.000/dia no plano grátis, não gastar 1 por professor)
+    const prof = url.searchParams.get('professor') || '', todos = prof === 'todos';
+    if (!todos && !PROF.test(prof)) return json({ erro: 'professor' }, 400);
     const lista = [];
     let cursor;
     do {
-      const r = await kv.list({ prefix: `p:${prof}:`, cursor });
-      for (const k of r.keys) lista.push({ id: k.name.slice(prof.length + 3), ...(k.metadata || {}) });
+      const r = await kv.list({ prefix: todos ? 'p:' : `p:${prof}:`, cursor });
+      for (const k of r.keys) { const [, pr, id] = k.name.split(':'); lista.push({ id, ...(todos ? { professor: pr } : {}), ...(k.metadata || {}) }); }
       cursor = r.list_complete ? null : r.cursor;
     } while (cursor);
     lista.sort((a, b) => (b.editadoEm || 0) - (a.editadoEm || 0));

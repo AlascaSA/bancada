@@ -1,4 +1,4 @@
-// Vigia da Bancada — Cloudflare Worker com cron (grátis). A cada 5 min olha a pasta de brutos de cada
+// Vigia da Bancada — Cloudflare Worker com cron (grátis). A cada 15 min olha a pasta de brutos de cada
 // professor no Drive e a lista de projetos; se há bruto sem projeto, ou mesa pedindo render novo, dispara
 // o robô no GitHub Actions (workflow robo.yml). Não processa vídeo: só decide se vale acordar o robô.
 // POST = olhar agora (é o que o botão «Rodar o robô agora» da Bancada chama, via /api/robo); GET = {rodando}.
@@ -40,9 +40,11 @@ async function acordarRobo(env) {
 export async function vigiar(env) {
   const profs = JSON.parse(env.PROFS || '{}'), site = env.BANCADA_SITE.replace(/\/$/, '');
   const motivos = [];
+  // uma listagem só para todos (KV grátis: 1.000 lists/dia; 3 por volta a cada 5 min estourou em 18/09)
+  const todos = (await (await fetch(`${site}/api/projetos?professor=todos`, { headers: UA })).json()).projetos || [];
   let tok = null;
   for (const [prof, P] of Object.entries(profs)) {
-    const projetos = (await (await fetch(`${site}/api/projetos?professor=${prof}`, { headers: UA })).json()).projetos || [];
+    const projetos = todos.filter(p => p.professor === prof);
     const feitos = new Set(projetos.map(p => p.fluxo?.brutoId).filter(Boolean));
     tok = tok || await token(env);
     const novos = (await videosNaPasta(tok, P.brutos)).filter(v => !feitos.has(v.id));
