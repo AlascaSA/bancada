@@ -9,7 +9,7 @@ const DESTINO = process.env.RUNNER_TEMP ? process.env.RUNNER_TEMP + '/teste-linu
 const browser = await chromium.launch({ channel: process.env.BANCADA_NAVEGADOR === 'chromium' ? undefined : 'chrome' });
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
 const page = await ctx.newPage();
-await page.addInitScript(() => { const p = HTMLMediaElement.prototype.play; HTMLMediaElement.prototype.play = function () { this.muted = true; this.volume = 0; return p.call(this); }; });
+await page.addInitScript(() => { const p = HTMLMediaElement.prototype.play; HTMLMediaElement.prototype.play = function () { this.muted = true; this.volume = 0; return p.call(this); }; try { Object.defineProperty(window, 'showSaveFilePicker', { value: undefined, configurable: true }); } catch {} });
 const erros = [];
 page.on('pageerror', e => erros.push('PAGEERROR ' + e.message));
 page.on('console', m => { if (m.type() === 'error') erros.push('CONSOLE ' + m.text().slice(0, 160)); });
@@ -28,7 +28,14 @@ await page.waitForFunction(() => !document.querySelector('#resultado').hidden ||
 const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), page.click('#btSalvar')]);
 await dl.saveAs(DESTINO);
 console.log(`export em ${((Date.now() - t0) / 1000).toFixed(1)} s · ${(statSync(DESTINO).size / 1e6).toFixed(1)} MB`);
-console.log('ffprobe:', execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=codec_type,codec_name,width,height,r_frame_rate,profile', '-of', 'csv=p=0', DESTINO], { encoding: 'utf8' }).trim().replace(/\n/g, ' | '));
+const sonda = a => execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=codec_type,codec_name,width,height,r_frame_rate,profile', '-of', 'csv=p=0', a], { encoding: 'utf8' }).trim().replace(/\n/g, ' | ');
+console.log('ffprobe:', sonda(DESTINO));
+// o mesmo passo do robô: áudio que não é AAC (Opus no Chrome/Linux) vira AAC pelo ffmpeg, vídeo intacto
+if (!/audio,aac/.test(sonda(DESTINO))) {
+  const t1 = Date.now();
+  execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', DESTINO, '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', DESTINO + '.aac.mp4']);
+  console.log(`áudio → aac em ${((Date.now() - t1) / 1000).toFixed(1)} s · ffprobe:`, sonda(DESTINO + '.aac.mp4'));
+}
 if (id) { await page.goto(`${SITE}/`); await page.evaluate(id => fetch(`/api/projetos/${id}?professor=jaylton`, { method: 'DELETE' }), id); }
 console.log('erros:', erros.length ? erros.join(' || ') : 'nenhum');
 await browser.close();

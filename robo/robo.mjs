@@ -66,6 +66,7 @@ async function abrirPagina(browser, prof) {
   await page.addInitScript(() => {
     const p = HTMLMediaElement.prototype.play; HTMLMediaElement.prototype.play = function () { this.muted = true; this.volume = 0; return p.call(this); };
     try { localStorage.setItem('bancada.quem', 'Robô'); } catch {}
+    try { Object.defineProperty(window, 'showSaveFilePicker', { value: undefined, configurable: true }); } catch {}   // Chrome: sem tela o seletor de salvar nunca fecha
   });
   const erros = [];
   page.on('pageerror', e => erros.push(e.message));

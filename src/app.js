@@ -1346,7 +1346,7 @@ async function salvar(blob, nome) {
     console.log('salvo no servidor de teste', await r.json());
     return;
   }
-  if (window.showSaveFilePicker) {
+  if (window.showSaveFilePicker && !E.robo) {   // sem tela (robô) o seletor de salvar nunca fecha: vai pelo <a download>
     try {
       const h = await showSaveFilePicker({ suggestedName: nome, types: [{ description: 'Vídeo MP4', accept: { 'video/mp4': ['.mp4'] } }] });
       const w = await h.createWritable(); await w.write(blob); await w.close();
