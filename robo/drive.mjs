@@ -92,5 +92,10 @@ export async function subir(caminho, nome, pastaId, existenteId = null, aoProgre
   } finally { closeSync(fd); }
   throw new Error('upload terminou sem resposta final');
 }
+// arquivos com este nome na pasta (não lixeira)
+export async function porNome(pastaId, nome) {
+  const cond = `name = '${nome.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}' and '${pastaId}' in parents and trashed = false`;
+  return ((await (await chamar(`${API}/files?q=${q(cond)}&fields=files(id,name)&supportsAllDrives=true&includeItemsFromAllDrives=true&pageSize=10`)).json()).files) || [];
+}
 // Shared Drive: a conta não apaga de vez, só manda para a lixeira
 export async function apagar(id) { await chamar(`${API}/files/${id}?supportsAllDrives=true`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) }); }

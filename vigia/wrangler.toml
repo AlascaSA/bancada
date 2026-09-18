@@ -10,4 +10,4 @@ crons = ["*/5 * * * *"]
 [vars]
 BANCADA_SITE = "https://bancada-6x9.pages.dev"
 GH_REPO = "AlascaSA/bancada"
-PROFS = '{"jaylton":{"nome":"Jaylton","brutos":"1vew1VlJ1ExEd9Te0lnvSIoWzWfO4UPQ1","prontos":"1oSEMar9FdA9U9ElLjE1FDsDQNSTGQryg"}}'
+PROFS = '{"jaylton":{"nome":"Jaylton","brutos":"1vew1VlJ1ExEd9Te0lnvSIoWzWfO4UPQ1","prontos":"1oSEMar9FdA9U9ElLjE1FDsDQNSTGQryg"},"pablo":{"nome":"Pablo","brutos":"1s7q4fue8F8vy9ZFErlEkM1s_JJN4jovg","prontos":"1vqgG8tueTgRae_-SHsEqafPxbOZcVNHD"},"andre":{"nome":"André","brutos":"1FP6IX_vziCr4aQOWr5yZwmW8L3Gi3SZR","prontos":"1JdNkgFjIWwzj9dqsUB4t5ZYuCqXND9w0"}}'

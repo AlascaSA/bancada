@@ -123,6 +123,7 @@ async function editarBruto(browser, prof, arq) {
     const nomeSaida = nomeEditado(arq.name);
     const pastaRev = await drive.acharOuCriarPasta('Em revisão', P.brutos);
     log(`[${prof}] ${arq.name}: subindo «${nomeSaida}»`);
+    for (const velho of await drive.porNome(pastaRev, nomeSaida)) await drive.apagar(velho.id);   // mesmo nome já em revisão (bruto reenviado): o antigo vai à lixeira
     const saidaId = await drive.subir(saida, nomeSaida, pastaRev);
     const agora = Date.now();
     await page.evaluate(f => window.__bancada.definirFluxo(f), {
