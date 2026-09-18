@@ -136,10 +136,10 @@ A equipe só sobe o bruto na pasta do Drive que já usa; o resto anda sozinho at
    `1vqgG8tueTgRae_-SHsEqafPxbOZcVNHD`, André `1JdNkgFjIWwzj9dqsUB4t5ZYuCqXND9w0`), sem reenviar; arquivo de mesmo
    nome que já estivesse lá vai para a lixeira (como o Renomeador faz ao substituir). Nada chega na entrega sem
    passar pelas duas revisões. «Devolver ao editor» volta uma etapa.
-5. **«Não faz isso / faz sempre isso»** — três canais. (0) **Reportar erro** num ponto do vídeo, no visualizador
-   ou na mesa: pega o tempo em que o vídeo está, pede o tipo (cortou fala boa, deixou erro passar, legenda errada,
+5. **«Não faz isso / faz sempre isso»** — três canais. (0) **Reportar erro** na fita da mesa (não no
+   visualizador — «aparece na linha do tempo de edição»): pega o tempo em que a prévia está, pede o tipo (cortou fala boa, deixou erro passar, legenda errada,
    legenda fora de tempo, outro) e uma linha de texto; guarda no projeto com o tempo no bruto e o trecho transcrito
-   em volta (`reportes`). A lista de reportes fica no visualizador e na mesa (clique = vai para o ponto). O
+   em volta (`reportes`). Cada reporte vira uma marca âmbar na fita, no ponto do bruto, e a lista fica sob a prévia (clique = vai para o ponto). O
    **Diário** (`diario.html?professor=<p>`, botão na lista de projetos) junta reportes e correções de corte por
    professor, com «Abrir na mesa» que cai no ponto (`?abrir=<id>&clipe=&t=`) e «Copiar em texto» para mandar a quem
    programa as regras. Os reportes de corte com trecho e os cortes desligados com o porquê viram **exemplos no
