@@ -1,0 +1,15 @@
+import { webkit } from 'playwright';
+const browser = await webkit.launch();
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.addInitScript(() => { const p = HTMLMediaElement.prototype.play; HTMLMediaElement.prototype.play = function () { this.muted = true; this.volume = 0; return p.call(this); }; });
+const erros = [];
+page.on('pageerror', e => erros.push('PAGEERROR ' + e.message + ' @ ' + (e.stack || '').split('\n')[1]));
+page.on('console', m => { if (m.type() === 'error') erros.push('CONSOLE ' + m.text().slice(0, 200)); });
+await page.goto('https://bancada-6x9.pages.dev/');
+await page.waitForSelector('#professores button');
+const base = new URL('../teste/', import.meta.url).pathname;
+await page.setInputFiles('#arquivos', ['01.mp4', '02.mp4', '03.mp4'].map(n => base + n));
+await page.waitForTimeout(45000);
+console.log(JSON.stringify(await page.evaluate(() => ({ fase: window.__E.fase, etapas: [...document.querySelectorAll('#etapas li')].map(l => l.className + ':' + l.textContent), erro: document.querySelector('#erroTexto')?.textContent, clipes: window.__E.clipes.map(c => ({ n: c.nome, audio: !!c.audio16, palavras: c.palavras?.length })) }))));
+console.log('erros:', erros.length ? erros.join(' || ') : 'nenhum');
+await browser.close();

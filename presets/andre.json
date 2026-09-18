@@ -1,0 +1,39 @@
+{
+  "id": "andre",
+  "nome": "André",
+  "descricao": "Corte seco e legenda Helvetica Bold branca a 78% da altura, sem música. Tamanho e altura provisórios até medir um vídeo publicado do André.",
+  "tema": {
+    "cor": "#22c55e",
+    "cor2": "#5ee08a"
+  },
+  "foto": "presets/andre-foto.jpg",
+  "saida": {
+    "largura": 1080,
+    "altura": 1920
+  },
+  "corte": {
+    "pausaMinima": 1.0,
+    "respiroSaida": 0.2,
+    "respiroEntrada": 0.12,
+    "cabecaRabo": true,
+    "soDepoisDeFrase": true
+  },
+  "legenda": {
+    "fonte": "Helvetica",
+    "fonteReserva": "Arial, sans-serif",
+    "peso": 700,
+    "tamanho": 0.046,
+    "cor": "#ffffff",
+    "y": 0.78,
+    "espacamento": -0.01,
+    "sombra": {
+      "cor": "rgba(0,0,0,0.6)",
+      "blur": 0.012,
+      "dy": 0.004
+    },
+    "larguraEm": 14,
+    "larguraMax": 0.86,
+    "linhas": 1
+  },
+  "musica": null
+}

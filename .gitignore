@@ -1,0 +1,9 @@
+node_modules/
+dist/
+tools/.tmp/
+tools/node_modules/
+robo/node_modules
+vigia/node_modules/
+.wrangler/
+.DS_Store
+teste/saida.mp4

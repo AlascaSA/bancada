@@ -1,0 +1,38 @@
+{
+  "id": "jaylton",
+  "nome": "Jaylton",
+  "descricao": "Conteúdo vertical do Jaylton (TikTok/Reels): corte seco, legenda Inter Bold branca numa linha, sem música.",
+  "tema": {
+    "cor": "#14a8f5",
+    "cor2": "#5cc4ff"
+  },
+  "foto": "presets/jaylton-foto.jpg",
+  "saida": {
+    "largura": 1080,
+    "altura": 1920
+  },
+  "corte": {
+    "pausaMinima": 1.0,
+    "respiroSaida": 0.2,
+    "respiroEntrada": 0.12,
+    "cabecaRabo": true,
+    "soDepoisDeFrase": true
+  },
+  "legenda": {
+    "fonte": "Inter",
+    "peso": 700,
+    "tamanho": 0.0455,
+    "cor": "#ffffff",
+    "y": 0.78,
+    "espacamento": -0.02,
+    "sombra": {
+      "cor": "rgba(0,0,0,0.6)",
+      "blur": 0.012,
+      "dy": 0.004
+    },
+    "larguraEm": 14,
+    "larguraMax": 0.86,
+    "linhas": 1
+  },
+  "musica": null
+}

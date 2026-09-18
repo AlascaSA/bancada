@@ -1,0 +1,14 @@
+# Cloudflare Pages: o site estático + as funções /api (chave da Groq como segredo GROQ_KEY).
+name = "bancada"
+pages_build_output_dir = "dist"
+compatibility_date = "2025-06-01"
+
+# projetos salvos (JSON + prévia MP4 + capa JPEG) — ver functions/api/projetos/[[path]].js
+[[kv_namespaces]]
+binding = "PROJETOS"
+id = "047e4bc566be4dafa4b27d399f421a18"
+
+# Drive do robô (segredos: GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REFRESH_TOKEN).
+# A pasta de entrega vem do projeto (fluxo.entrega.pastaId, escrita pelo robô a partir do robo.json); a var abaixo é só reserva.
+[vars]
+DRIVE_PASTA_PRONTOS_ID = ""

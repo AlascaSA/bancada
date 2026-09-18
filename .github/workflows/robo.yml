@@ -1,0 +1,41 @@
+name: Robô da Bancada
+
+# Disparado pelo vigia (Cloudflare Worker em vigia/) quando cai bruto novo na pasta do Drive ou uma mesa pede
+# render novo; também à mão, aqui no GitHub. Uma volta só: edita o que for novo e sai.
+on:
+  workflow_dispatch:
+
+# duas voltas ao mesmo tempo editariam o mesmo bruto duas vezes: uma por vez, a segunda espera
+concurrency:
+  group: robo
+  cancel-in-progress: false
+
+jobs:
+  robo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar o robô (sem baixar navegador; usa o Google Chrome do runner)
+        run: cd robo && npm install --no-audit --no-fund
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
+      - name: Conferir Chrome e ffmpeg
+        run: |
+          google-chrome --version
+          ffmpeg -version | head -1
+
+      - name: Uma volta do robô
+        run: node robo/robo.mjs --uma-vez
+        env:
+          BANCADA_NAVEGADOR: chrome
+          BANCADA_DIR: ${{ runner.temp }}/bancada
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}

@@ -1,0 +1,43 @@
+{
+  "id": "pablo",
+  "nome": "Pablo",
+  "descricao": "Template \"Million\": Montserrat Light com a última palavra em ExtraBold na linha de baixo, centralizada, branca, sem música. Tamanho e espaçamento se ajustam no painel Estilo da legenda.",
+  "tema": {
+    "cor": "#a855f7",
+    "cor2": "#c58cff"
+  },
+  "foto": "presets/pablo-foto.jpg",
+  "saida": {
+    "largura": 1080,
+    "altura": 1920
+  },
+  "corte": {
+    "pausaMinima": 1.0,
+    "respiroSaida": 0.2,
+    "respiroEntrada": 0.12,
+    "cabecaRabo": true,
+    "soDepoisDeFrase": true
+  },
+  "legenda": {
+    "fonte": "Montserrat",
+    "peso": 300,
+    "tamanho": 0.052,
+    "cor": "#ffffff",
+    "y": 0.78,
+    "espacamento": 0,
+    "sombra": {
+      "cor": "rgba(0,0,0,0.5)",
+      "blur": 0.012,
+      "dy": 0.004
+    },
+    "larguraEm": 14,
+    "larguraMax": 0.86,
+    "linhas": 2,
+    "destaque": {
+      "peso": 800,
+      "escala": 1.0
+    },
+    "entrelinha": 1.1
+  },
+  "musica": null
+}

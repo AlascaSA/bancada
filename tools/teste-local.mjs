@@ -1,0 +1,15 @@
+import { webkit } from 'playwright';
+const browser = await webkit.launch();
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.addInitScript(() => { const p = HTMLMediaElement.prototype.play; HTMLMediaElement.prototype.play = function () { this.muted = true; this.volume = 0; return p.call(this); }; });
+const erros = [];
+page.on('pageerror', e => erros.push('PAGEERROR ' + e.message));
+page.on('console', m => { if (m.type() === 'error') erros.push('CONSOLE ' + m.text().slice(0, 160)); });
+await page.goto('http://localhost:8799/?teste=1');
+const t0 = Date.now();
+await page.waitForFunction(() => window.__E && (window.__E.fase === 'pronto' || window.__E.fase === 'erro'), null, { timeout: 180000 });
+console.log('fase', await page.evaluate(() => window.__E.fase), 'em', ((Date.now() - t0) / 1000).toFixed(1), 's; etapas', JSON.stringify(await page.evaluate(() => Object.fromEntries(Object.entries(window.__E.tempos.etapas).map(([k, v]) => [k, +v.toFixed(1)])))));
+console.log('cortes:', await page.evaluate(() => window.__E.cortes.map(k => `${k.clipe + 1}:${k.tipo}:${k.de.toFixed(2)}-${k.ate.toFixed(2)}`).join(' | ')));
+console.log('cues:', await page.evaluate(() => window.__E.cues.length), await page.evaluate(() => window.__E.cues.slice(0, 8).map(c => `${c.de.toFixed(2)}-${c.ate.toFixed(2)} ${c.texto}`).join(' | ')));
+console.log('erros:', erros.length ? erros.join(' || ') : 'nenhum');
+await browser.close();

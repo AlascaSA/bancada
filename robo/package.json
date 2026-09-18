@@ -1,0 +1,7 @@
+{
+  "name": "bancada-robo",
+  "private": true,
+  "type": "module",
+  "description": "Robô da Bancada: vigia o Drive, edita os brutos na Bancada publicada e deixa o MP4 em revisão",
+  "dependencies": { "playwright": "^1.63.0" }
+}

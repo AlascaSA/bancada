@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bancada</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="src/style.css">
+<script type="importmap">{ "imports": { "mediabunny": "https://cdn.jsdelivr.net/npm/mediabunny@1.56.2/dist/bundles/mediabunny.min.mjs" } }</script>
+</head>
+<body class="aurora">
+<header class="topo">
+  <a class="marca" id="marca" href="./" title="Voltar para a tela inicial"><span class="marca-nome">Bancada</span><span class="marca-sub">edição simples</span></a>
+  <div class="professores" role="radiogroup" aria-label="Professor" id="professores"></div>
+  <div class="topo-dir">
+    <span class="chip" id="chipGroq" title="Transcrição pela Groq"><i class="ponto"></i>Groq</span>
+    <span class="chip" id="chipCodec" title="Verificando os codecs do navegador"><i class="ponto"></i>codecs</span>
+    <span class="projeto-cab" id="projetoCab" hidden>
+      <input class="projeto-nome" id="projetoNome" type="text" aria-label="Nome do projeto" placeholder="Nome do projeto" maxlength="80">
+      <span class="chip pendente" id="chipSalvo" title="O projeto salva sozinho no servidor"><i class="ponto"></i>não salvo</span>
+    </span>
+    <button class="chip" id="chipQuem" type="button" title="Seu nome, para o «editado por» dos projetos"><i class="ponto"></i>quem edita?</button>
+  </div>
+</header>
+
+<main class="main" id="main">
+  <section class="entrada" id="entrada">
+    <div class="entrada-grid">
+      <div class="mesa-solta">
+        <div class="mesa-solta-core" id="solta" tabindex="0" role="button" aria-label="Soltar os brutos ou escolher arquivos">
+          <div class="filme" aria-hidden="true">
+            <div class="furos"></div>
+            <div class="slots" id="slots"></div>
+            <div class="furos"></div>
+          </div>
+          <div class="solta-texto" id="soltaTexto">
+            <h1>Solte os brutos aqui</h1>
+            <p>Um bruto só ou quantos forem. A ordem vem da numeração no nome do arquivo. Nada sai do seu computador — só o áudio, em mono, vai para a transcrição.</p>
+            <div class="solta-acoes">
+              <button class="bt bt-primario bt-solta" id="btEscolher" type="button">
+                Escolher arquivos
+                <span class="bt-seta" aria-hidden="true"><svg viewBox="0 0 24 24" class="ico"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </button>
+              <span class="apoio">ou arraste do Finder para cá</span>
+            </div>
+          </div>
+          <div class="pedido" id="pedido" hidden>
+            <h2>Abrir <span id="pedidoNome"></span></h2>
+            <p>Solte os mesmos brutos (ou escolha os arquivos). A mesa volta como estava, sem transcrever de novo.</p>
+            <ul class="pedido-lista" id="pedidoLista"></ul>
+            <p class="apoio" id="pedidoAviso"></p>
+            <div class="solta-acoes">
+              <button class="bt bt-primario" id="btPedidoDrive" type="button" hidden>Baixar o bruto do Drive</button>
+              <button class="bt bt-primario" id="btPedidoEscolher" type="button">Escolher arquivos</button>
+              <button class="bt bt-fantasma" id="btPedidoCancelar" type="button">Cancelar</button>
+            </div>
+            <div class="progresso" id="pedidoProgresso" hidden><div class="barra"><i id="pedidoBarra"></i></div><span class="tnum apoio" id="pedidoProgressoTexto">0%</span></div>
+          </div>
+          <div class="revisao" id="revisao" hidden>
+            <div class="revisao-cab">
+              <div>
+                <h2 id="revisaoNome"></h2>
+                <p class="apoio" id="revisaoSub"></p>
+              </div>
+              <span class="etapa-chip" id="revisaoEtapa"></span>
+            </div>
+            <div class="revisao-corpo">
+              <div class="revisao-video"><video id="revisaoVideo" controls playsinline preload="metadata"></video></div>
+              <div class="revisao-lado">
+                <p id="revisaoTexto"></p>
+                <ol class="historico" id="revisaoHistorico"></ol>
+                <div class="revisao-acoes" id="revisaoAcoes"></div>
+                <p class="apoio" id="revisaoAviso"></p>
+              </div>
+            </div>
+          </div>
+          <ol class="brutos" id="brutos" hidden></ol>
+          <ol class="etapas" id="etapas" hidden></ol>
+          <div class="erro" id="erro" hidden><p id="erroTexto"></p><button class="bt bt-fantasma" id="btRecomecar" type="button">Recomeçar</button></div>
+          <input type="file" id="arquivos" accept="video/*,.mp4,.mov,.m4v" multiple hidden>
+        </div>
+      </div>
+      <aside class="ficha">
+        <h2>O que a Bancada faz com eles</h2>
+        <ul class="ficha-lista">
+          <li>
+            <span class="ficha-ico"><svg viewBox="0 0 24 24" class="ico"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.5 15.5M20 20 8.5 8.5"/></svg></span>
+            <div><strong>Corte seco</strong><span>cabeça, rabo e toda pausa acima de 1 s — você liga e desliga cada um</span></div>
+          </li>
+          <li>
+            <span class="ficha-ico"><svg viewBox="0 0 24 24" class="ico"><path d="M4 18 9.5 5h1L16 18M6.2 13h7.6"/><path d="M18 11.5c1.7 0 2.5.8 2.5 2.2V18h-1.6l-.2-1c-.5.7-1.3 1.2-2.3 1.2-1.4 0-2.4-.8-2.4-2 0-1.4 1.2-2.1 3.3-2.1h1.3"/></svg></span>
+            <div><strong>Legenda no padrão do professor</strong><span>uma linha, na fonte, no tamanho e na altura que o canal usa</span></div>
+          </li>
+          <li>
+            <span class="ficha-ico"><svg viewBox="0 0 24 24" class="ico"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg></span>
+            <div><strong>MP4 1080x1920</strong><span>renderizado aqui no navegador, com o tempo de cada etapa medido</span></div>
+          </li>
+        </ul>
+        <div class="padrao-core">
+            <div class="padrao-foto-aro"><img class="padrao-foto" id="padraoFoto" src="presets/jaylton-foto.jpg" width="512" height="512" alt="Jaylton"></div>
+            <div class="padrao-info">
+              <span class="apoio">Padrão ativo</span>
+              <strong id="padraoNome">Jaylton</strong>
+              <p id="padraoDesc">Corte seco, legenda Inter Bold branca a 78% da altura, sem música.</p>
+              <div class="padrao-especime" id="padraoEspecime" aria-label="Como a legenda fica">
+                <span class="especime-texto">quando o cliente pergunta,</span>
+                <span class="apoio">Inter Bold · 49 px · 78% da altura</span>
+              </div>
+              <span class="apoio">Troque o professor no topo da página.</span>
+            </div>
+        </div>
+      </aside>
+    </div>
+    <section class="projetos" id="projetos" hidden aria-label="Projetos salvos">
+      <div class="projetos-cab">
+        <h2 id="projetosTitulo">Projetos</h2>
+        <span class="apoio">Salvos sozinhos enquanto você edita. Clique para reabrir; passe o mouse para ver o começo.</span>
+        <button class="bt bt-mini bt-fantasma" id="btRegras" type="button">Regras do professor</button>
+      </div>
+      <div class="regras" id="regras" hidden>
+        <label for="regrasTexto"><strong id="regrasTitulo">Regras do professor</strong> <span class="apoio">— «não faz isso», «faz sempre isso». A revisão por IA lê antes de decidir; o que precisa virar regra fixa do corte a equipe técnica lê no diário e programa.</span></label>
+        <textarea id="regrasTexto" rows="4" maxlength="4000" placeholder="Ex.: quando ele repete a frase de propósito, para dar ênfase, não é erro: não cortar.&#10;Ex.: sempre tirar o respiro antes de «então»."></textarea>
+        <div class="regras-pe"><span class="apoio" id="regrasEstado"></span><button class="bt bt-mini" id="btRegrasSalvar" type="button">Salvar regras</button></div>
+      </div>
+      <div class="projetos-grade" id="projetosGrade"></div>
+    </section>
+  </section>
+
+  <section class="mesa" id="mesa" hidden>
+    <div class="mesa-esq">
+      <div class="bloco-cab">
+        <h2>Fita</h2>
+        <span class="apoio" id="fitaResumo"></span>
+      </div>
+      <div class="fita" id="fita"></div>
+      <div class="duas">
+        <section class="painel">
+          <div class="bloco-cab"><h2>Cortes</h2><span class="apoio" id="cortesResumo"></span></div>
+          <div class="fx-barra">
+            <button class="bt bt-mini" id="btFx" type="button">
+              <svg viewBox="0 0 24 24" class="ico"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Transições
+            </button>
+            <button class="bt bt-mini bt-fantasma" id="btFxTodas" type="button" hidden title="A última transição adicionada em todas as emendas entre brutos">Em todas as emendas</button>
+            <span class="apoio" id="fxVazio">Film burn, light leak… overlays com fundo preto. Arraste do Finder direto para uma emenda na fita, ou carregue aqui e arraste o chip.</span>
+            <input type="file" id="arquivosFx" accept="video/*,.mp4,.mov" multiple hidden>
+          </div>
+          <ul class="fx-lista" id="fxLista"></ul>
+          <ul class="lista" id="cortes"></ul>
+        </section>
+        <section class="painel">
+          <div class="bloco-cab"><h2>Legendas</h2><span class="apoio" id="cuesResumo"></span></div>
+          <ul class="lista" id="cues"></ul>
+        </section>
+      </div>
+    </div>
+    <aside class="mesa-dir">
+      <div class="previa-moldura"><div class="previa" id="previa"></div></div>
+      <div class="controles">
+        <button class="bt bt-icone" id="btPlay" type="button" aria-label="Tocar">
+          <svg viewBox="0 0 24 24" class="ico ico-play"><path d="M7 5v14l11-7z"/></svg>
+          <svg viewBox="0 0 24 24" class="ico ico-pause" hidden><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+        </button>
+        <input type="range" id="scrub" min="0" max="1000" value="0" step="1" aria-label="Posição">
+        <span class="tnum apoio" id="tempoPrevia">0:00 / 0:00</span>
+      </div>
+      <section class="fluxo" id="fluxo" hidden aria-live="polite">
+        <div class="bloco-cab"><h2>Revisão</h2><span class="etapa-chip" id="fluxoEtapa"></span></div>
+        <p class="apoio" id="fluxoTexto"></p>
+        <div class="revisao-acoes" id="fluxoAcoes"></div>
+      </section>
+      <div class="mover" aria-label="Posição da legenda">
+        <div class="mover-cab">
+          <span class="mover-titulo"><svg viewBox="0 0 24 24" class="ico"><path d="M12 3v18M3 12h18M8 7l4-4 4 4M8 17l4 4 4-4M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg>Arraste a legenda na prévia</span>
+          <div class="segm" role="radiogroup" id="moverModo">
+            <button type="button" role="radio" data-modo="todas" aria-checked="true">Todas juntas</button>
+            <button type="button" role="radio" data-modo="uma" aria-checked="false">Só esta</button>
+          </div>
+        </div>
+        <div class="mover-pe">
+          <span class="tnum apoio" id="moverOnde">78% da altura</span>
+          <span class="apoio" id="moverProprias"></span>
+          <button class="bt bt-mini bt-fantasma" id="btMoverPadrao" type="button" disabled>Voltar ao padrão</button>
+        </div>
+      </div>
+      <div class="estilo" aria-label="Estilo da legenda">
+        <div class="mover-cab">
+          <span class="mover-titulo"><svg viewBox="0 0 24 24" class="ico"><path d="M4 19 10 5h1l6 14M6.6 13h7.8"/><path d="M17 7h4M19 5v4"/></svg>Estilo da legenda</span>
+          <button class="bt bt-mini bt-fantasma" id="btEstiloPadrao" type="button" disabled>Voltar ao padrão</button>
+        </div>
+        <div class="estilo-grade">
+          <label class="campo"><span>Fonte</span><select id="estFonte"></select></label>
+          <label class="campo"><span>Peso</span><select id="estPeso"></select></label>
+          <label class="campo faixa"><span>Tamanho</span><input type="range" id="estTamanho" min="0.03" max="0.085" step="0.001"><output id="estTamanhoV" class="tnum"></output></label>
+          <label class="campo faixa"><span>Espaçamento</span><input type="range" id="estEspaco" min="-0.06" max="0.14" step="0.005"><output id="estEspacoV" class="tnum"></output></label>
+          <label class="campo marca"><input type="checkbox" id="estDestaque"><span>Última palavra em negrito, na linha de baixo</span></label>
+          <div class="estilo-destaque" id="estDestaqueOpcoes" hidden>
+            <label class="campo"><span>Peso do destaque</span><select id="estPesoDestaque"></select></label>
+            <label class="campo faixa"><span>Entrelinha</span><input type="range" id="estEntrelinha" min="0.9" max="1.6" step="0.02"><output id="estEntrelinhaV" class="tnum"></output></label>
+          </div>
+        </div>
+      </div>
+      <div class="exportar">
+        <button class="bt bt-primario" id="btExportar" type="button">Exportar MP4</button>
+        <div class="progresso" id="progresso" hidden>
+          <div class="barra"><i id="barraFill"></i></div>
+          <span class="tnum apoio" id="progressoTexto">0%</span>
+          <button class="bt bt-fantasma" id="btCancelar" type="button">Cancelar</button>
+        </div>
+        <div class="resultado" id="resultado" hidden>
+          <span id="resultadoTexto" class="tnum"></span>
+          <div class="resultado-acoes">
+            <button class="bt bt-primario" id="btSalvar" type="button">Salvar MP4</button>
+            <button class="bt" id="btVerResultado" type="button">Ver como saiu</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </section>
+</main>
+<script type="module" src="src/app.js"></script>
+</body>
+</html>

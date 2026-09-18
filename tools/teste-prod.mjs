@@ -1,0 +1,21 @@
+// Fluxo completo no site publicado, com arquivos de verdade pelo input (sem rota de teste). Mudo.
+import { webkit } from 'playwright';
+const URL = process.argv[2] || 'https://bancada-6x9.pages.dev/';
+const browser = await webkit.launch();
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.addInitScript(() => { const p = HTMLMediaElement.prototype.play; HTMLMediaElement.prototype.play = function () { this.muted = true; this.volume = 0; return p.call(this); }; });
+const erros = [];
+page.on('pageerror', e => erros.push('PAGEERROR ' + e.message));
+page.on('console', m => { if (m.type() === 'error') erros.push('CONSOLE ' + m.text().slice(0, 140)); });
+await page.goto(URL);
+await page.waitForSelector('#professores button');
+const t0 = Date.now();
+const base = new globalThis.URL('../teste/', import.meta.url).pathname;
+await page.setInputFiles('#arquivos', ['01.mp4', '02.mp4', '03.mp4'].map(n => base + n));
+await page.waitForFunction(() => window.__E && window.__E.fase === 'pronto', null, { timeout: 120000 });
+console.log('pronto em', ((Date.now() - t0) / 1000).toFixed(1), 's |', JSON.stringify(await page.evaluate(() => ({ cortes: window.__E.cortes.length, cues: window.__E.cues.length, etapas: Object.fromEntries(Object.entries(window.__E.tempos.etapas).map(([k, v]) => [k, +v.toFixed(1)])) }))));
+await page.click('#btExportar');
+await page.waitForFunction(() => !document.querySelector('#resultado').hidden, null, { timeout: 240000 });
+console.log('export:', await page.evaluate(() => document.querySelector('#resultadoTexto').textContent), '| render', await page.evaluate(() => window.__E.tempos.etapas.render.toFixed(1)), 's');
+console.log('erros:', erros.length ? erros.join(' || ') : 'nenhum');
+await browser.close();

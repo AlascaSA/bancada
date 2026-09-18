@@ -1,0 +1,23 @@
+name: Teste da Bancada no Linux (Chrome)
+
+# Prova que a Bancada publicada edita e exporta no Google Chrome do runner (codecs por software):
+# solta o clipe de teste, espera a mesa, exporta, baixa e mede o MP4. Não usa Drive nem segredos.
+on:
+  workflow_dispatch:
+
+jobs:
+  teste:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: cd robo && npm install --no-audit --no-fund
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      - run: google-chrome --version && ffprobe -version | head -1
+      - name: Editar e exportar o clipe de teste no Chrome
+        run: node tools/teste-linux.mjs
+        working-directory: robo

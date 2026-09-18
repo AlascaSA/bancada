@@ -1,0 +1,13 @@
+# Vigia da Bancada: Worker com cron que acorda o robô no GitHub Actions quando cai bruto novo.
+# Publicar: cd vigia && npx wrangler deploy   (segredos: sh segredos.sh)
+name = "bancada-vigia"
+main = "index.js"
+compatibility_date = "2025-06-01"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+BANCADA_SITE = "https://bancada-6x9.pages.dev"
+GH_REPO = "AlascaSA/bancada"
+PROFS = '{"jaylton":{"nome":"Jaylton","brutos":"1vew1VlJ1ExEd9Te0lnvSIoWzWfO4UPQ1","prontos":"1oSEMar9FdA9U9ElLjE1FDsDQNSTGQryg"}}'
