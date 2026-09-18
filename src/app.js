@@ -1202,6 +1202,7 @@ function formReporte(alvo, tSaida, aoEnviar) {
   const acoes = el('div', 'revisao-acoes');
   acoes.append(botao('Enviar reporte', () => { if (!tipo && !ta.value.trim()) { ta.focus(); return; } alvo.hidden = true; aoEnviar({ tipo: tipo || 'outro', texto: ta.value.trim() }); }, 'bt-primario'), botao('Cancelar', () => { alvo.hidden = true; }, 'bt-fantasma'));
   alvo.append(cab, chips, ta, acoes);
+  alvo.addEventListener('keydown', ev => { if (ev.key === 'Escape') { alvo.hidden = true; } }, { once: true });
   ta.focus();
 }
 function novoReporte({ tipo, texto }, tSaida, segmentos, brutos, quem) {
