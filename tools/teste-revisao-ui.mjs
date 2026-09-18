@@ -25,7 +25,7 @@ if (!robo) { console.log('erros:', erros.join(' | ') || 'nenhum'); await browser
 await page.evaluate(async id => {
   const p = await (await fetch(`/api/projetos/${id}?professor=jaylton`, { cache: 'no-store' })).json();
   p.cortes = p.cortes.filter(k => k.tipo !== 'manual'); p.cortes.forEach(k => { k.ligado = true; });
-  p.feedback = []; p.fluxo = { ...p.fluxo, etapa: 'editor', pedirRender: false, historico: (p.fluxo.historico || []).slice(0, 1) }; delete p.fluxo.revisadoPor;
+  p.feedback = []; p.reportes = []; p.fluxo = { ...p.fluxo, etapa: 'editor', pedirRender: false, historico: (p.fluxo.historico || []).slice(0, 1) }; delete p.fluxo.revisadoPor;
   await fetch(`/api/projetos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) });
 }, robo.id);
 await page.reload(); await page.waitForFunction(() => !!window.__E && !!window.__bancada?.salvarAgora, null, { timeout: 60000 });
@@ -38,6 +38,17 @@ await page.waitForFunction(() => { const v = document.querySelector('#revisaoVid
 const vis = await page.evaluate(() => ({ nome: document.querySelector('#revisaoNome').textContent, etapa: document.querySelector('#revisaoEtapa').textContent, dur: document.querySelector('#revisaoVideo').duration, botoes: [...document.querySelectorAll('#revisaoAcoes .bt')].map(b => b.textContent) }));
 ok(vis.dur > 1, `visualizador toca o MP4 do Drive: «${vis.nome}» ${vis.dur.toFixed(1)} s · ${vis.etapa} · ${vis.botoes.join(' / ')}`);
 await page.screenshot({ path: FOTOS + 'revisao-1-visualizador.png' });
+// 1b) reportar erro no visualizador: ponto do vídeo, tipo, texto → projeto, com o trecho transcrito
+await page.evaluate(() => { const v = document.querySelector('#revisaoVideo'); v.currentTime = 5; });
+await page.click('#revisaoAcoes .bt:has-text("Reportar erro")');
+await page.waitForSelector('#reporteRev:not([hidden])');
+await page.click('#reporteRev .porque-chip:has-text("cortou fala boa")');
+await page.fill('#reporteRev textarea', 'ele explica isso e a IA tirou');
+await page.click('#reporteRev .bt-primario');
+await page.waitForSelector('#revisaoReportes li', { timeout: 20000 });
+const rep1 = (await page.evaluate(async id => (await (await fetch(`/api/projetos/${id}?professor=jaylton`, { cache: 'no-store' })).json()).reportes, robo.id))[0];
+ok(rep1 && rep1.tipo === 'cortou fala boa' && Math.abs(rep1.tSaida - 5) < 0.3 && rep1.trecho.length > 0 && rep1.quem === 'Teste', `reporte no visualizador salvo: ${rep1?.tipo} · ${rep1?.tSaida} s → clipe ${rep1?.clipe} ${rep1?.tClipe} s · «${(rep1?.trecho || '').slice(0, 50)}»`);
+await page.screenshot({ path: FOTOS + 'revisao-1b-reporte.png' });
 
 // 2) editor marca como revisado → revisão final
 await page.click('#revisaoAcoes .bt-primario');
@@ -73,6 +84,15 @@ const mesa = await page.evaluate(() => ({ etapa: document.querySelector('#fluxoE
 ok(mesa.etapa === 'Revisão final' && mesa.botoes[0] === 'Aprovar e enviar ao Drive', `mesa: ${mesa.etapa} · ${mesa.botoes.join(' / ')}`);
 ok(mesa.texto.includes('exatamente esta mesa'), 'render corresponde à mesa: ' + mesa.texto);
 await page.screenshot({ path: FOTOS + 'revisao-2-mesa.png' });
+// 3b) reportar erro na mesa, no ponto em que a prévia está
+await page.evaluate(() => window.__previa.irPara(3));
+await page.click('#btReportar');
+await page.waitForSelector('#reporteMesa:not([hidden])');
+await page.click('#reporteMesa .porque-chip:has-text("legenda errada")');
+await page.click('#reporteMesa .bt-primario');
+await page.waitForFunction(() => window.__E.reportes.length === 2 && document.querySelector('#chipSalvo').textContent === 'salvo', null, { timeout: 20000 });
+const rep2 = await page.evaluate(() => window.__E.reportes[1]);
+ok(rep2.tipo === 'legenda errada' && Math.abs(rep2.tSaida - 3) < 0.3 && !(await page.isHidden('#mesaReportes')), `reporte na mesa salvo: ${rep2.tipo} · ${rep2.tSaida} s · lista com ${await page.$$eval('#mesaReportes li', l => l.length)} itens`);
 
 // 4) desligar um corte da IA → «Por quê?» → chip → feedback; a mesa passa a pedir render
 const n = await page.evaluate(() => window.__E.cortes.filter(k => k.ligado && k.tipo !== 'manual').length);
@@ -112,6 +132,19 @@ await page.reload(); await page.waitForFunction(() => !!window.__E && window.__E
 ok((await page.evaluate(() => window.__E.regras)).includes('ênfase'), 'regras voltam do servidor e entram na revisão por IA');
 await page.evaluate(() => fetch('/api/regras/jaylton', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto: '', quem: 'Teste' }) }));
 await page.screenshot({ path: FOTOS + 'revisao-4-regras.png' });
+// 7) diário: lista os reportes e o «Abrir na mesa» cai no ponto
+await page.goto(`${URL}/diario.html?professor=jaylton`);
+let nDiario = 0;
+for (let t = 0; t < 12; t++) { if (t) await page.waitForTimeout(8000); nDiario = await page.$$eval('.diario-lista li .tipo', l => l.filter(x => x.textContent.includes('cortou fala boa')).length); if (nDiario) break; else await page.reload(); }
+ok(nDiario >= 1, `diário lista o reporte (${nDiario})`);
+await page.screenshot({ path: FOTOS + 'revisao-5-diario.png' });
+await page.click('.diario-lista li:has(.tipo:has-text("cortou fala boa")) a.bt');
+await page.waitForSelector('#pedido:not([hidden])', { timeout: 30000 });
+await page.click('#btPedidoDrive');
+await page.waitForFunction(() => window.__E.fase === 'pronto', null, { timeout: 180000 });
+await page.waitForTimeout(600);
+const tAgora = await page.evaluate(() => window.__previa.tempoAtual());
+ok(Math.abs(tAgora - rep1.tSaida) < 0.6, `«Abrir na mesa» do diário caiu em ${tAgora.toFixed(2)} s (reporte em ${rep1.tSaida} s)`);
 
 console.log('erros de página:', erros.join(' | ') || 'nenhum');
 await browser.close();

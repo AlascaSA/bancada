@@ -46,7 +46,7 @@ def _metadados(d):
     f = d.get("fluxo")
     return {"id": d["id"], "nome": d.get("nome", ""), "editadoEm": d.get("editadoEm", 0), "editadoPor": d.get("editadoPor", ""), "duracao": d.get("duracao", 0), "brutos": len(d.get("brutos", [])), "midiaEm": d.get("midiaEm", 0),
             "fluxo": ({"etapa": f.get("etapa", "editor"), "pedirRender": bool(f.get("pedirRender")), "brutoId": (f.get("bruto") or {}).get("driveId", ""), "saida": bool((f.get("saida") or {}).get("driveId")), "link": f.get("link", ""), "erro": (f.get("erro") or "")[:200]} if f else None),
-            "feedback": len(d.get("feedback") or [])}
+            "feedback": len(d.get("feedback") or []) + len(d.get("reportes") or [])}
 
 
 # ---- Drive (emula a Pages Function com os arquivos de token da Dublagem)
@@ -217,8 +217,12 @@ class H(http.server.BaseHTTPRequestHandler):
             for a in os.listdir(pasta):
                 if not a.endswith(".json"): continue
                 with open(os.path.join(pasta, a), encoding="utf-8") as f: d = json.load(f)
+                brutos = d.get("brutos") or []
+                nome_bruto = lambda i: brutos[i].get("nome", "") if 0 <= i < len(brutos) else ""
                 for fb in d.get("feedback") or []:
-                    itens.append(dict({"projeto": d["id"], "nome": d.get("nome", ""), "bruto": (d.get("brutos") or [{}] * (fb.get("clipe", 0) + 1))[fb.get("clipe", 0)].get("nome", "")}, **fb))
+                    itens.append(dict({"fonte": "corte", "projeto": d["id"], "nome": d.get("nome", ""), "bruto": nome_bruto(fb.get("clipe", 0))}, **fb))
+                for rp in d.get("reportes") or []:
+                    itens.append(dict({"fonte": "reporte", "projeto": d["id"], "nome": d.get("nome", ""), "bruto": nome_bruto(rp.get("clipe", 0))}, **rp))
         itens.sort(key=lambda x: -(x.get("quando") or 0))
         return js({"itens": itens})
 

@@ -136,7 +136,14 @@ A equipe só sobe o bruto na pasta do Drive que já usa; o resto anda sozinho at
    `1vqgG8tueTgRae_-SHsEqafPxbOZcVNHD`, André `1JdNkgFjIWwzj9dqsUB4t5ZYuCqXND9w0`), sem reenviar; arquivo de mesmo
    nome que já estivesse lá vai para a lixeira (como o Renomeador faz ao substituir). Nada chega na entrega sem
    passar pelas duas revisões. «Devolver ao editor» volta uma etapa.
-5. **«Não faz isso / faz sempre isso»** — dois canais. (a) Ao desligar um corte da IA a mesa pergunta
+5. **«Não faz isso / faz sempre isso»** — três canais. (0) **Reportar erro** num ponto do vídeo, no visualizador
+   ou na mesa: pega o tempo em que o vídeo está, pede o tipo (cortou fala boa, deixou erro passar, legenda errada,
+   legenda fora de tempo, outro) e uma linha de texto; guarda no projeto com o tempo no bruto e o trecho transcrito
+   em volta (`reportes`). A lista de reportes fica no visualizador e na mesa (clique = vai para o ponto). O
+   **Diário** (`diario.html?professor=<p>`, botão na lista de projetos) junta reportes e correções de corte por
+   professor, com «Abrir na mesa» que cai no ponto (`?abrir=<id>&clipe=&t=`) e «Copiar em texto» para mandar a quem
+   programa as regras. Os reportes de corte com trecho e os cortes desligados com o porquê viram **exemplos no
+   prompt da revisão por IA** do professor (12 mais recentes), sem ninguém programar. (a) Ao desligar um corte da IA a mesa pergunta
    «Por quê?» (era ênfase, era pausa boa, cortou cedo, cortou tarde, outro); corte feito à mão vira «a IA não
    viu». Tudo fica no projeto e sai junto em `/api/feedback?professor=<p>` — o diário de onde a equipe técnica
    tira as regras novas do planejador (regra de corte é código: cada correção recorrente vira regra e teste,

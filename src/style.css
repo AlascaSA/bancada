@@ -380,7 +380,7 @@ body.aurora::before {
 .cue-pino { width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 6px; background: color-mix(in oklab, var(--brand) 16%, transparent); color: var(--brand-2); cursor: pointer; }
 .cue-pino:hover { background: color-mix(in oklab, var(--brand) 30%, transparent); }
 .cue-pino .ico { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.controles { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; }
+.controles { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; }
 .controles input[type="range"] { width: 100%; }
 .exportar { display: grid; gap: 10px; }
 .resultado { display: grid; gap: 10px; padding: 12px; border-radius: var(--raio); background: color-mix(in oklab, var(--green) 10%, var(--elev)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--green) 40%, transparent); }
@@ -504,3 +504,32 @@ button.chip:hover { background: var(--surface-3); }
 .marca { text-decoration: none; color: inherit; cursor: pointer; border-radius: 8px; transition: opacity .15s; }
 .marca:hover .marca-nome { color: var(--brand-2); }
 .marca:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
+
+/* ---------- reportar erro num ponto do vídeo */
+.reporte { display: grid; gap: 10px; padding: 12px 14px; border-radius: var(--raio); background: color-mix(in oklab, var(--amber) 8%, var(--elev)); border: 1px solid color-mix(in oklab, var(--amber) 40%, var(--border)); }
+.reporte-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.reporte-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.porque-chip.ligado { background: var(--amber); border-color: var(--amber); color: #1a1200; }
+.reporte textarea { width: 100%; resize: vertical; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font: 400 13px/1.5 var(--font); }
+.reporte textarea:focus { outline: none; border-color: var(--amber); }
+.reportes { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.reportes li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 6px 10px; border-radius: var(--raio-p); background: var(--surface); font-size: 13px; cursor: pointer; }
+.reportes li:hover { background: var(--surface-2); }
+.reportes li strong { color: var(--amber); font-size: 12px; }
+.reportes .reporte-texto { flex: 1 1 100%; color: var(--ink-2); }
+.reportes li .apoio { font-size: 11px; white-space: nowrap; }
+.projetos-cab #btDiario { text-decoration: none; }
+
+/* ---------- diário (diario.html) */
+.diario { max-width: 980px; margin: 24px auto; padding: 0 20px; display: grid; gap: 16px; }
+.diario-cab { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.diario-cab h1 { font-size: 22px; letter-spacing: -0.02em; margin: 0; }
+.diario-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.diario-lista li { display: grid; grid-template-columns: 1fr auto; gap: 6px 14px; padding: 12px 14px; border-radius: var(--raio); background: var(--elev); border: 1px solid var(--border); }
+.diario-lista .quando { color: var(--muted); font-size: 12px; }
+.diario-lista .tipo { color: var(--amber); font-weight: 800; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+.diario-lista .tipo.corte { color: var(--brand-2); }
+.diario-lista .trecho { color: var(--ink-2); font-style: italic; }
+.diario-lista .texto { font-weight: 600; }
+.diario-lista a.bt { text-decoration: none; align-self: start; }
+.diario-vazio { color: var(--muted); padding: 30px; text-align: center; }

@@ -76,7 +76,8 @@ const fragmento = l => tokens(l.texto).length <= 3 || /(\.\.\.|…)$/.test(l.tex
 
 // devolve { [ci]: [{deIdx, ateIdx, motivo}] } para o planejador
 // regras: texto livre da equipe para este professor («não corta repetição de ênfase»…) — entra no prompt, acima das regras gerais
-export async function revisarTentativas(clipes, cortes, { perguntar = perguntarGroq, aoProgredir, regras = '' } = {}) {
+// exemplos: reportes e correções anteriores da equipe neste professor (do diário), em texto curto
+export async function revisarTentativas(clipes, cortes, { perguntar = perguntarGroq, aoProgredir, regras = '', exemplos = [] } = {}) {
   const extras = {};
   const trabalhos = [];
   clipes.forEach((clipe, ci) => {
@@ -89,6 +90,7 @@ export async function revisarTentativas(clipes, cortes, { perguntar = perguntarG
     const fr = frases(palavras);
     const pergunta = montarPergunta(fr, palavras, cortes, ci, cadeia);
     if (regras.trim()) pergunta.sistema += ` Regras deste professor, dadas pela equipe de edição (valem acima das gerais): ${regras.trim().replace(/\s+/g, ' ')}`;
+    if (exemplos.length) pergunta.sistema += ` Correções anteriores da equipe de edição neste professor, aprenda com elas: ${exemplos.join(' | ').slice(0, 1800)}`;
     let resposta;
     try { resposta = await perguntar(pergunta); } catch (e) { console.warn('revisão', e); feitos++; continue; }
     const porId = new Map(pergunta.linhas.map(l => [l.id, l]));

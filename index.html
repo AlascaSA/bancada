@@ -72,6 +72,8 @@
                 <ol class="historico" id="revisaoHistorico"></ol>
                 <div class="revisao-acoes" id="revisaoAcoes"></div>
                 <p class="apoio" id="revisaoAviso"></p>
+                <div class="reporte" id="reporteRev" hidden></div>
+                <ul class="reportes" id="revisaoReportes" hidden></ul>
               </div>
             </div>
           </div>
@@ -117,6 +119,7 @@
         <h2 id="projetosTitulo">Projetos</h2>
         <span class="apoio">Salvos sozinhos enquanto você edita. Clique para reabrir; passe o mouse para ver o começo.</span>
         <button class="bt bt-mini bt-fantasma" id="btRegras" type="button">Regras do professor</button>
+        <a class="bt bt-mini bt-fantasma" id="btDiario" href="diario.html" title="Reportes e correções da equipe, para virar regra">Diário</a>
       </div>
       <div class="regras" id="regras" hidden>
         <label for="regrasTexto"><strong id="regrasTitulo">Regras do professor</strong> <span class="apoio">— «não faz isso», «faz sempre isso». A revisão por IA lê antes de decidir; o que precisa virar regra fixa do corte a equipe técnica lê no diário e programa.</span></label>
@@ -164,7 +167,10 @@
         </button>
         <input type="range" id="scrub" min="0" max="1000" value="0" step="1" aria-label="Posição">
         <span class="tnum apoio" id="tempoPrevia">0:00 / 0:00</span>
+        <button class="bt bt-mini" id="btReportar" type="button" title="Reportar um erro neste ponto do vídeo">Reportar erro</button>
       </div>
+      <div class="reporte" id="reporteMesa" hidden></div>
+      <ul class="reportes" id="mesaReportes" hidden></ul>
       <section class="fluxo" id="fluxo" hidden aria-live="polite">
         <div class="bloco-cab"><h2>Revisão</h2><span class="etapa-chip" id="fluxoEtapa"></span></div>
         <p class="apoio" id="fluxoTexto"></p>

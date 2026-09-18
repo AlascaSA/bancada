@@ -37,6 +37,9 @@ const E = {
   revisao: {},                            // tentativas abandonadas que a IA apontou (por clipe) — entra no planejador e no projeto salvo
   fluxo: null,                            // projeto vindo do robô: {etapa: 'editor'|'final'|'entregue', bruto, saida, pedirRender, historico…}
   feedback: [],                           // correções da equipe nos cortes, com o porquê — diário que vira regra
+  reportes: [],                           // erros reportados num ponto do vídeo: {quando, quem, tipo, texto, tSaida, clipe, tClipe, trecho}
+  exemplos: [],                           // reportes/correções anteriores do professor (do diário) que entram no prompt da revisão por IA
+  irPara: null,                           // veio do diário (?abrir=<id>&clipe=&t=): vai para esse ponto quando a mesa abrir
   regras: '',                             // regras do professor escritas pela equipe (entram na revisão por IA)
   robo: new URLSearchParams(location.search).has('robo'),   // sem gesto humano: o robô dirige a página pelo window.__bancada
   revisando: null,                        // projeto aberto no visualizador de revisão (sem os brutos)
@@ -303,7 +306,7 @@ async function receber(files) {
     await etapa('cortar', 'Cortando', async () => { E.cortes = planejarCortes(E.clipes, E.preset); E.segmentos = montarSegmentos(E.clipes, E.cortes); });
     // onde ele "caçou" a frase (3+ refeituras encadeadas), a IA lê o trecho e fica só com a última tomada de cada ideia
     await etapa('revisar', 'Revisando', async () => {
-      E.revisao = await revisarTentativas(E.clipes, E.cortes, { aoProgredir: (n, m) => detalheEtapa('revisar', `${n} de ${m} trechos`), regras: E.regras });
+      E.revisao = await revisarTentativas(E.clipes, E.cortes, { aoProgredir: (n, m) => detalheEtapa('revisar', `${n} de ${m} trechos`), regras: E.regras, exemplos: E.exemplos });
       if (Object.keys(E.revisao).length) { E.cortes = planejarCortes(E.clipes, E.preset, E.revisao); E.segmentos = montarSegmentos(E.clipes, E.cortes); }
       detalheEtapa('revisar', '');
     });
@@ -329,6 +332,8 @@ function abrirMesa() {
   $('#projetoCab').hidden = false;
   $('#projetoNome').value = E.projeto?.nome || '';
   desenharFluxo();
+  $('#reporteMesa').hidden = true;
+  listaReportes($('#mesaReportes'), E.reportes, r => previa?.irPara(tempoSaidaDe(E.segmentos, r.clipe, r.tClipe)));
   if (!previa) {
     previa = new Previa($('#previa'), aoTempoPrevia);
     previa.posicaoDe = c => posicaoLegenda(c, estiloLegenda(), E.legendaBloco);
@@ -871,12 +876,12 @@ function montarProjeto() {
     transicoes: E.transicoes.map(t => ({ id: t.id, nome: t.nome, tamanho: t.file.size })),
     emendaFx: [...E.emendaFx], cortes: E.cortes, edicoes: [...E.edicoes], deslocs: [...E.deslocs], legendaBloco: E.legendaBloco,
     estilo: E.estilo, modoMover: E.modoMover, alteracoes: E.alteracoes, revisao: E.revisao,
-    fluxo: E.fluxo, feedback: E.feedback,
+    fluxo: E.fluxo, feedback: E.feedback, reportes: E.reportes,
     tempos: { etapas: T.etapas, dSolto: t0 - T.solto, dPronto: T.pronto ? T.pronto - T.solto : null, dExportar: T.exportar ? T.exportar - T.solto : null, dRenderFim: T.renderFim ? T.renderFim - T.solto : null, dFim: T.fim ? T.fim - T.solto : null },
   };
 }
 // o que muda o projeto (fora a transcrição, que não muda): assina para gravar só quando mudou
-const assinaturaProjeto = () => JSON.stringify([E.alteracoes, E.projeto?.nome, E.estilo, E.cortes.map(k => [k.id, k.ligado, k.de, k.ate]), [...E.emendaFx], [...E.edicoes], [...E.deslocs], E.legendaBloco, E.modoMover, E.transicoes.length, E.fluxo && [E.fluxo.etapa, E.fluxo.pedirRender, E.fluxo.saida?.driveId, E.fluxo.saida?.assinatura], E.feedback.length]);
+const assinaturaProjeto = () => JSON.stringify([E.alteracoes, E.projeto?.nome, E.estilo, E.cortes.map(k => [k.id, k.ligado, k.de, k.ate]), [...E.emendaFx], [...E.edicoes], [...E.deslocs], E.legendaBloco, E.modoMover, E.transicoes.length, E.fluxo && [E.fluxo.etapa, E.fluxo.pedirRender, E.fluxo.saida?.driveId, E.fluxo.saida?.assinatura], E.feedback.length, E.reportes.length]);
 // o que muda o VÍDEO exportado (sem contador, sem nome): é o que o robô guarda ao renderizar, para saber se a mesa mudou depois
 const assinaturaPlano = () => JSON.stringify([E.cortes.map(k => [k.clipe, k.ligado, +k.de.toFixed(3), +k.ate.toFixed(3)]), [...E.emendaFx], [...E.edicoes], [...E.deslocs], E.legendaBloco, E.estilo, E.transicoes.map(t => t.id)]);
 let autosaveId = null, salvoAss = '', vistaAss = '', salvando = false, midiaAss = '', midiaEm = 0;
@@ -902,7 +907,7 @@ async function tentarSalvar(forcar) {
     const proj = montarProjeto();
     const r = await gravar(proj);
     E.projeto.editadoEm = r.editadoEm; salvoAss = a;
-    anotarRecente({ id: proj.id, nome: proj.nome, editadoEm: r.editadoEm, editadoPor: proj.editadoPor, duracao: proj.duracao, brutos: proj.brutos.length, midiaEm: E.projeto.midiaEm || 0, fluxo: resumoFluxo(E.fluxo), feedback: E.feedback.length });
+    anotarRecente({ id: proj.id, nome: proj.nome, editadoEm: r.editadoEm, editadoPor: proj.editadoPor, duracao: proj.duracao, brutos: proj.brutos.length, midiaEm: E.projeto.midiaEm || 0, fluxo: resumoFluxo(E.fluxo), feedback: E.feedback.length + E.reportes.length });
     estadoSalvar('ok', 'salvo');
     await atualizarMidiaProjeto();
   } catch (e) { console.warn('autosave', e); estadoSalvar('falhou', 'não salvou'); }
@@ -1143,12 +1148,13 @@ function desenharRevisao() {
   else if (f.etapa === 'final') ac.append(botao(f.pedirRender ? 'Aprovar (espera o render)' : 'Aprovar e enviar ao Drive', entregarDaRevisao, 'bt-primario', !!f.pedirRender), botao('Devolver ao editor', () => mudarEtapaRevisao('editor', 'devolvido ao editor')), botaoLink(proj.id));
   else if (f.etapa === 'entregue') { if (f.link) ac.append(linkDrive(f.link)); }
   else ac.append(botaoLink(proj.id));
-  ac.append(botao('Abrir a mesa para ajustar', () => { fecharRevisao(false); abrirProjeto(proj.id); }), botao('Fechar', () => fecharRevisao(true), 'bt-fantasma'));
+  ac.append(botao('Reportar erro', reportarNoVisualizador), botao('Abrir a mesa para ajustar', () => { fecharRevisao(false); abrirProjeto(proj.id); }), botao('Fechar', () => fecharRevisao(true), 'bt-fantasma'));
+  listaReportes($('#revisaoReportes'), proj.reportes || [], r => { const v = $('#revisaoVideo'); v.currentTime = r.tSaida; v.pause(); });
   $('#revisaoAviso').textContent = f.etapa !== 'entregue' && f.pedirRender ? 'A aprovação libera quando o render novo terminar.' : '';
 }
 function fecharRevisao(voltar) {
   const v = $('#revisaoVideo'); v.pause(); v.removeAttribute('src'); delete v.dataset.src; v.load();
-  E.revisando = null; $('#revisao').hidden = true;
+  E.revisando = null; $('#revisao').hidden = true; $('#reporteRev').hidden = true;
   if (voltar) { $('#soltaTexto').hidden = false; desenharProjetos(); }
 }
 function anotarRevisando(quem) { const p = E.revisando; anotarRecente({ id: p.id, nome: p.nome, editadoEm: p.editadoEm || Date.now(), editadoPor: quem, duracao: p.duracao, brutos: p.brutos.length, midiaEm: p.midiaEm || 0, fluxo: resumoFluxo(p.fluxo), feedback: (p.feedback || []).length }); }
@@ -1172,11 +1178,80 @@ async function entregarDaRevisao() {
   } catch (e) { mostrarErro(`Não deu para enviar ao Drive: ${e.message}`); }
   desenharRevisao();
 }
+// ---------- reportar erro num ponto do vídeo (visualizador e mesa): vai para o projeto, para o diário e para a revisão por IA
+const TIPOS_REPORTE = ['cortou fala boa', 'deixou erro passar', 'legenda errada', 'legenda fora de tempo', 'outro'];
+const fmtV = t => fmt(t).replace('.', ',');
+function tempoClipeDe(segmentos, tSaida) {
+  const s = segmentos.find(s => tSaida >= s.saidaDe && tSaida <= s.saidaAte) || segmentos[segmentos.length - 1];
+  return s ? { clipe: s.clipe, tClipe: s.de + Math.min(Math.max(0, tSaida - s.saidaDe), s.dur) } : { clipe: 0, tClipe: tSaida };
+}
+function tempoSaidaDe(segmentos, clipe, tClipe) {
+  const s = segmentos.find(s => s.clipe === clipe && tClipe >= s.de && tClipe <= s.ate);
+  if (s) return s.saidaDe + (tClipe - s.de);
+  const depois = segmentos.find(s => s.clipe === clipe && s.de >= tClipe);   // o ponto foi cortado: vai para o que ficou logo depois
+  return depois ? depois.saidaDe : 0;
+}
+const trechoDe = (palavras, t, raio = 4) => (palavras || []).filter(w => w.ate >= t - raio && w.de <= t + raio).map(w => w.texto).join(' ').slice(0, 240);
+function formReporte(alvo, tSaida, aoEnviar) {
+  alvo.innerHTML = ''; alvo.hidden = false;
+  let tipo = '';
+  const cab = el('div', 'reporte-cab'); cab.append(el('strong', null, 'Reportar erro'), el('span', 'apoio tnum', `no ponto ${fmtV(tSaida)}`));
+  const chips = el('div', 'reporte-chips');
+  for (const t of TIPOS_REPORTE) { const b = el('button', 'porque-chip', t); b.type = 'button'; b.addEventListener('click', () => { tipo = t; chips.querySelectorAll('.porque-chip').forEach(x => x.classList.toggle('ligado', x === b)); }); chips.append(b); }
+  const ta = el('textarea'); ta.rows = 2; ta.maxLength = 500; ta.placeholder = 'O que está errado? Uma linha já ajuda.';
+  const acoes = el('div', 'revisao-acoes');
+  acoes.append(botao('Enviar reporte', () => { if (!tipo && !ta.value.trim()) { ta.focus(); return; } alvo.hidden = true; aoEnviar({ tipo: tipo || 'outro', texto: ta.value.trim() }); }, 'bt-primario'), botao('Cancelar', () => { alvo.hidden = true; }, 'bt-fantasma'));
+  alvo.append(cab, chips, ta, acoes);
+  ta.focus();
+}
+function novoReporte({ tipo, texto }, tSaida, segmentos, brutos, quem) {
+  const { clipe, tClipe } = tempoClipeDe(segmentos, tSaida);
+  return { quando: Date.now(), quem: quem || '', tipo, texto, tSaida: +tSaida.toFixed(2), clipe, tClipe: +tClipe.toFixed(2), trecho: trechoDe(brutos[clipe]?.palavras, tClipe) };
+}
+function listaReportes(ul, reportes, aoClicar) {
+  ul.innerHTML = ''; ul.hidden = !reportes.length;
+  for (const r of [...reportes].reverse()) {
+    const li = el('li');
+    li.append(el('span', 'tnum', fmtV(r.tSaida)), el('strong', null, r.tipo), el('span', 'reporte-texto', r.texto || ''), el('span', 'apoio', `${r.quem || '—'} · ${haQuanto(r.quando)}`));
+    if (aoClicar) { li.tabIndex = 0; li.title = 'Ir para o ponto'; li.addEventListener('click', () => aoClicar(r)); }
+    ul.append(li);
+  }
+}
+function reportarNaMesa() {
+  if (!previa || E.fase !== 'pronto') return;
+  alternarPlay(false);
+  const t = previa.tempoAtual();
+  formReporte($('#reporteMesa'), t, r => {
+    const quem = nomeQuem(); if (quem == null) return;
+    E.reportes.push(novoReporte(r, t, E.segmentos, E.clipes, quem)); salvoAss = ''; tentarSalvar(true);
+    listaReportes($('#mesaReportes'), E.reportes, x => previa.irPara(tempoSaidaDe(E.segmentos, x.clipe, x.tClipe)));
+  });
+}
+function reportarNoVisualizador() {
+  const proj = E.revisando, v = $('#revisaoVideo'); if (!proj) return;
+  v.pause();
+  const t = v.currentTime || 0;
+  formReporte($('#reporteRev'), t, async r => {
+    const quem = nomeQuem(); if (quem == null) return;
+    const segs = montarSegmentos(proj.brutos, proj.cortes || []);
+    proj.reportes = [...(proj.reportes || []), novoReporte(r, t, segs, proj.brutos, quem)];
+    try { proj.editadoPor = quem; const g = await gravar(proj); proj.editadoEm = g.editadoEm; anotarRevisando(quem); }
+    catch (e) { mostrarErro(`Não salvou o reporte: ${e.message}`); }
+    listaReportes($('#revisaoReportes'), proj.reportes, x => { v.currentTime = x.tSaida; v.pause(); });
+  });
+}
 // regras do professor («não faz isso», «faz sempre isso»)
 async function carregarRegras() {
   try { const r = await (await fetch(`/api/regras/${E.professor}`, { cache: 'no-store' })).json(); E.regras = r.texto || ''; $('#regrasEstado').textContent = r.editadoEm ? `salvas ${haQuanto(r.editadoEm)}${r.editadoPor ? ` por ${r.editadoPor}` : ''}` : 'nenhuma regra ainda'; }
   catch { E.regras = ''; $('#regrasEstado').textContent = ''; }
   $('#regrasTexto').value = E.regras; $('#regrasTitulo').textContent = `Regras do ${E.preset.nome}`;
+  $('#btDiario').href = `diario.html?professor=${E.professor}`;
+  try { const d = await (await fetch(`/api/feedback?professor=${E.professor}`, { cache: 'no-store' })).json(); E.exemplos = exemplosDoDiario(d.itens || []); } catch { E.exemplos = []; }
+}
+// o diário vira exemplos curtos no prompt da revisão por IA: reportes de corte com trecho e cortes desligados com o porquê (12 mais recentes)
+function exemplosDoDiario(itens) {
+  return itens.filter(i => (i.fonte === 'reporte' && /cortou fala boa|deixou erro passar/.test(i.tipo || '') && i.trecho) || (i.fonte === 'corte' && i.acao === 'manteve' && i.texto))
+    .slice(0, 12).map(i => i.fonte === 'reporte' ? `[${i.tipo}] «${i.trecho}»${i.texto ? ` — ${i.texto}` : ''}` : `[não era erro, ${i.porque}] «${i.texto}»`);
 }
 function ligarRegras() {
   $('#btRegras').addEventListener('click', () => { const r = $('#regras'); r.hidden = !r.hidden; if (!r.hidden) $('#regrasTexto').focus(); });
@@ -1226,7 +1301,7 @@ async function restaurarProjeto(proj, arquivos) {
     await etapa('montar', 'Montando a mesa', async () => {
       E.cortes = proj.cortes || []; reservarIds(Math.max(0, ...E.cortes.map(k => k.id || 0)));
       E.revisao = proj.revisao || {};
-      E.fluxo = proj.fluxo || null; E.feedback = proj.feedback || [];
+      E.fluxo = proj.fluxo || null; E.feedback = proj.feedback || []; E.reportes = proj.reportes || [];
       E.edicoes = new Map(proj.edicoes || []); E.deslocs = new Map(proj.deslocs || []);
       const temFx = new Set(E.transicoes.map(t => t.id));
       E.emendaFx = new Map((proj.emendaFx || []).filter(([, fx]) => temFx.has(fx.id)));
@@ -1246,11 +1321,13 @@ async function restaurarProjeto(proj, arquivos) {
   if (!E.tempos.pronto) E.tempos.pronto = agora();
   abrirMesa();
   iniciarAutosave();
+  if (E.irPara) { previa.irPara(tempoSaidaDe(E.segmentos, E.irPara.clipe, E.irPara.tClipe)); E.irPara = null; }
 }
 function ligarProjetos() {
   $('#btPedidoEscolher').addEventListener('click', ev => { ev.stopPropagation(); $('#arquivos').click(); });
   $('#btPedidoCancelar').addEventListener('click', ev => { ev.stopPropagation(); cancelarPedido(); });
   $('#btPedidoDrive').addEventListener('click', ev => { ev.stopPropagation(); baixarBrutoDoDrive(); });
+  $('#btReportar').addEventListener('click', reportarNaMesa);
   $('#projetoNome').addEventListener('change', ev => { if (E.projeto) { E.projeto.nome = ev.target.value.trim() || nomePadraoProjeto(); ev.target.value = E.projeto.nome; } });
   const chipQuem = $('#chipQuem');
   const pintaQuem = () => { chipQuem.innerHTML = `<i class="ponto"></i>${E.quem ? escapa(E.quem) : 'quem edita?'}`; chipQuem.classList.toggle('ok', !!E.quem); };
@@ -1457,6 +1534,8 @@ async function iniciar() {
   desenharProjetos();
   // chegou pelo link de revisão (?revisar=<id>): abre o visualizador direto e limpa o parâmetro da barra
   if (Q.get('revisar')) { const id = Q.get('revisar'); history.replaceState(null, '', `${location.pathname}?professor=${E.professor}`); abrirRevisao(id); }
+  // veio do diário: abre o projeto (pede os brutos ou o Drive) e, na mesa, vai para o ponto reportado
+  if (Q.get('abrir')) { const id = Q.get('abrir'); E.irPara = { clipe: +(Q.get('clipe') || 0), tClipe: +(Q.get('t') || 0) }; history.replaceState(null, '', `${location.pathname}?professor=${E.professor}`); abrirProjeto(id); }
   window.__E = E;
   // o robô (robo/robo.mjs) dirige a página por aqui: abre projeto, define o fluxo, salva antes de fechar
   window.__bancada.abrirProjeto = abrirProjeto;

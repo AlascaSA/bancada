@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diário · Bancada</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="src/style.css">
+</head>
+<body class="aurora">
+<header class="topo">
+  <a class="marca" href="./" title="Voltar para a Bancada"><span class="marca-nome">Bancada</span><span class="marca-sub">diário</span></a>
+  <div class="professores" role="radiogroup" aria-label="Professor" id="professores"></div>
+  <div class="topo-dir"><button class="bt bt-mini" id="btCopiar" type="button" title="Copia o diário em texto, para mandar para quem programa as regras">Copiar em texto</button></div>
+</header>
+<main class="diario">
+  <div class="diario-cab">
+    <h1 id="titulo">Diário</h1>
+    <span class="apoio">Cada erro reportado num ponto do vídeo e cada corte da IA que a equipe desligou, com o porquê. É daqui que saem as regras novas; os reportes de corte também entram no prompt da revisão por IA do professor. A lista demora até um minuto para mostrar o que acabou de ser salvo.</span>
+  </div>
+  <ul class="diario-lista" id="lista"></ul>
+</main>
+<script type="module" src="src/diario.js"></script>
+</body>
+</html>
