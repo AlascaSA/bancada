@@ -1018,6 +1018,8 @@ async function baixarBrutoDoDrive() {
       if (total) { $('#pedidoBarra').style.transform = `scaleX(${(lidos / total).toFixed(3)})`; $('#pedidoProgressoTexto').textContent = `${Math.round(100 * lidos / total)}% · ${(lidos / 1e6).toFixed(0)} de ${(total / 1e6).toFixed(0)} MB`; }
     }
     if (!E.pedido) return;
+    // o robô pode ter editado um proxy H.264 do bruto (HEVC do iPhone…): o tamanho gravado no projeto é o do proxy, o id do Drive é a prova de que é o mesmo vídeo
+    for (const x of E.pedido.proj.brutos) if (x.nome === b.nome) x.tamanho = lidos;
     receberParaProjeto([new File(partes, b.nome, { type: 'video/mp4' })]);
   } catch (e) { $('#pedidoAviso').textContent = `Não deu para baixar do Drive: ${e.message}`; }
   finally { bt.disabled = false; pg.hidden = true; }
@@ -1240,6 +1242,36 @@ function desenharReportesNaFita() {
     tr.append(m);
   }
 }
+// «Rodar o robô agora»: sem esperar a ronda de 5 min do vigia — pede ao vigia para olhar as pastas do Drive já
+let vigiaRoboId = null;
+function estadoRobo(texto, classe = '') { const t = $('#roboTexto'); t.textContent = texto; t.className = `apoio robo-texto ${classe}`; }
+async function carregarRobo() {
+  try { const e = await (await fetch('/api/robo', { cache: 'no-store' })).json(); if (e.rodando) { estadoRobo('o robô está editando agora; o projeto aparece aqui quando terminar.', 'rodando'); vigiarProjetosNovos(); } } catch {}
+}
+async function rodarRoboAgora() {
+  const bt = $('#btRobo'); bt.disabled = true; estadoRobo('olhando as pastas do Drive…');
+  try {
+    const r = await (await fetch('/api/robo', { method: 'POST' })).json();
+    if (r.erro) throw new Error(r.erro);
+    const motivos = (r.motivos || []).join('; ');
+    if (r.acordou) { estadoRobo(`robô acordado: ${motivos}. Em uns minutos o projeto aparece aqui.`, 'rodando'); vigiarProjetosNovos(); }
+    else if (r.esperando) { estadoRobo(`o robô já está editando (${motivos}); o que entrou agora ele pega na volta seguinte.`, 'rodando'); vigiarProjetosNovos(); }
+    else if (r.rodando) { estadoRobo('nada novo nas pastas; o robô está terminando uma volta.', 'rodando'); vigiarProjetosNovos(); }
+    else estadoRobo('nada novo nas pastas do Drive: todo bruto de lá já tem projeto.');
+  } catch (e) { estadoRobo(`não deu para acordar o robô: ${e.message}`, 'erro'); }
+  finally { bt.disabled = false; }
+}
+// enquanto o robô trabalha, a lista se atualiza sozinha (a cada 20 s, por até 25 min) e avisa quando aparece cartão novo
+function vigiarProjetosNovos() {
+  if (vigiaRoboId) return;
+  const antes = new Set([...document.querySelectorAll('.projeto')].map(a => a.dataset.id)), t0 = Date.now();
+  vigiaRoboId = setInterval(async () => {
+    if (E.fase !== 'vazio' || Date.now() - t0 > 25 * 60e3) { clearInterval(vigiaRoboId); vigiaRoboId = null; return; }
+    await desenharProjetos();
+    if ([...document.querySelectorAll('.projeto')].some(a => !antes.has(a.dataset.id) && a.querySelector('.etapa-chip'))) { clearInterval(vigiaRoboId); vigiaRoboId = null; estadoRobo('o robô terminou: projeto novo na lista.', 'ok'); }
+  }, 20000);
+}
+function ligarRobo() { $('#btRobo').addEventListener('click', rodarRoboAgora); }
 // regras do professor («não faz isso», «faz sempre isso»)
 async function carregarRegras() {
   try { const r = await (await fetch(`/api/regras/${E.professor}`, { cache: 'no-store' })).json(); E.regras = r.texto || ''; $('#regrasEstado').textContent = r.editadoEm ? `salvas ${haQuanto(r.editadoEm)}${r.editadoPor ? ` por ${r.editadoPor}` : ''}` : 'nenhuma regra ainda'; }
@@ -1531,6 +1563,8 @@ async function iniciar() {
   ligarProjetos();
   ligarRegras();
   carregarRegras();
+  ligarRobo();
+  carregarRobo();
   desenharProjetos();
   // chegou pelo link de revisão (?revisar=<id>): abre o visualizador direto e limpa o parâmetro da barra
   if (Q.get('revisar')) { const id = Q.get('revisar'); history.replaceState(null, '', `${location.pathname}?professor=${E.professor}`); abrirRevisao(id); }

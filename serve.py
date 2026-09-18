@@ -191,6 +191,13 @@ class H(http.server.BaseHTTPRequestHandler):
             return js({"ok": True, "link": fl["link"]})
         return js({"erro": "rota"}, 404)
 
+    def _robo(self, metodo):
+        # local não acorda o robô da nuvem: responde como o vigia responderia sem nada novo
+        def js(obj, status=200):
+            corpo = json.dumps(obj, ensure_ascii=False).encode(); self._cabecalhos(status, MIME[".json"], len(corpo)); self.wfile.write(corpo)
+        if metodo == "POST": return js({"acordou": False, "motivos": [], "rodando": False, "local": True})
+        return js({"rodando": False})
+
     def _regras(self, metodo):
         prof = urllib.parse.urlparse(self.path).path[len("/api/regras/"):].strip("/")
         def js(obj, status=200):
@@ -252,6 +259,7 @@ class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/api/drive/"): return self._drive("GET")
         if self.path.startswith("/api/regras/"): return self._regras("GET")
+        if self.path.split("?")[0] == "/api/robo": return self._robo("GET")
         if self.path.startswith("/api/feedback"): return self._feedback()
         if self.path.startswith("/api/transcricao/"): return self._transcricao("GET")
         if self.path.startswith("/api/projetos"): return self._projetos("GET")
@@ -308,6 +316,7 @@ class H(http.server.BaseHTTPRequestHandler):
 
     def do_POST(self):
         caminho = self.path.split("?")[0]
+        if caminho == "/api/robo": return self._robo("POST")
         if caminho.startswith("/api/drive/"): return self._drive("POST")
         if caminho == "/api/salvar-teste" and TESTE:
             # modo de teste: grava o MP4 exportado em teste/saida.mp4 para conferir com ffprobe

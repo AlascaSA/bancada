@@ -17,7 +17,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { join, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { webkit, chromium } from 'playwright';
 import * as drive from './drive.mjs';
@@ -98,6 +98,35 @@ function garantirAac(arquivo) {
   log(`   áudio ${codec} → aac`);
 }
 
+// O Chrome do runner não decodifica HEVC (iPhone), ProRes, 10 bits… : o que não for H.264 8 bits vira um proxy
+// H.264 (lado menor ≤ 1080) ao lado do original, e é o proxy que entra na mesa. Tempos não mudam.
+function prepararBruto(original, proxy) {
+  if (existsSync(proxy)) return proxy;
+  let streams;
+  try { streams = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=codec_type,codec_name,pix_fmt', '-of', 'json', original], { encoding: 'utf8' })).streams || []; } catch { return original; }
+  const v = streams.find(s => s.codec_type === 'video'), a = streams.find(s => s.codec_type === 'audio');
+  const videoOk = v && v.codec_name === 'h264' && (!v.pix_fmt || /^yuvj?420p$/.test(v.pix_fmt));
+  const audioOk = !a || ['aac', 'mp3', 'opus'].includes(a.codec_name);
+  if (videoOk && audioOk) return original;
+  log(`   ${v?.codec_name || '?'}${v?.pix_fmt ? '/' + v.pix_fmt : ''}${a ? ' + ' + a.codec_name : ''} → proxy h264/aac`);
+  mkdirSync(dirname(proxy), { recursive: true });
+  const tmp = proxy + '.tmp' + extname(proxy);
+  execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', original, '-map', '0:v:0', '-map', '0:a:0?', '-vf', "scale='if(gte(iw,ih),-2,min(iw,1080))':'if(gte(iw,ih),min(ih,1080),-2)'", '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', tmp]);
+  renameSync(tmp, proxy);
+  return proxy;
+}
+// A mesa nem chegou a existir (vídeo que não abre, sem áudio…): grava um projeto-marcador com o erro, para o cartão
+// mostrar «o robô falhou» e o vigia não acordar o robô de novo a cada 5 min. Apagar o cartão = tentar de novo.
+async function marcarFalha(prof, arq, msg) {
+  const P = CFG.profs[prof], id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, agora = Date.now(), tamanho = +arq.size || 0;
+  await api(`/api/projetos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+    id, professor: prof, nome: semExt(arq.name), criadoEm: agora, editadoPor: 'Robô', versao: 1, duracao: 0,
+    brutos: [{ nome: arq.name, tamanho, palavras: [] }], transicoes: [], cortes: [], edicoes: [], deslocs: [], emendaFx: [], estilo: {}, revisao: {}, feedback: [], reportes: [],
+    fluxo: { etapa: 'editor', erro: String(msg).slice(0, 300), bruto: { driveId: arq.id, nome: arq.name, tamanho, pastaId: P.brutos }, entrega: { pastaId: P.prontos }, historico: [{ quando: agora, quem: 'Robô', o: `falhou: ${String(msg).slice(0, 120)}` }] },
+  }) });
+  return id;
+}
+
 // ---- 1 bruto novo → mesa → MP4 em «Em revisão» → projeto na etapa do editor
 async function editarBruto(browser, prof, arq) {
   const P = CFG.profs[prof];
@@ -105,11 +134,12 @@ async function editarBruto(browser, prof, arq) {
   const local = join(pasta, arq.name), tamanho = +arq.size || 0;
   log(`[${prof}] ${arq.name}: baixando ${(tamanho / 1e6).toFixed(0)} MB`);
   await drive.baixar(arq.id, local, tamanho);
+  const usar = prepararBruto(local, join(pasta, 'proxy', arq.name));
   const { page, ctx, erros } = await abrirPagina(browser, prof);
   let id = null;
   try {
     log(`[${prof}] ${arq.name}: editando`);
-    await page.setInputFiles('#arquivos', [local]);
+    await page.setInputFiles('#arquivos', [usar]);
     await esperarPronto(page, 40);
     id = await page.evaluate(() => window.__E.projeto.id);
     await page.evaluate(n => window.__bancada.definirNome(n), semExt(arq.name));
@@ -135,9 +165,9 @@ async function editarBruto(browser, prof, arq) {
     log(`[${prof}] ${arq.name}: pronto → projeto ${id}${erros.length ? ` (avisos: ${erros.slice(0, 2).join(' | ')})` : ''}`);
     return id;
   } catch (e) {
-    if (id) {   // a mesa existiu: deixa o erro no cartão em vez de tentar de novo em silêncio
-      try { await page.evaluate(m => window.__bancada.definirFluxo({ erro: m }), String(e.message).slice(0, 300)); await page.evaluate(() => window.__bancada.salvarAgora()); await page.waitForTimeout(1200); } catch {}
-    }
+    // o erro fica num cartão («o robô falhou»), em vez de tentar de novo em silêncio a cada volta
+    if (id) { try { await page.evaluate(m => window.__bancada.definirFluxo({ erro: m }), String(e.message).slice(0, 300)); await page.evaluate(() => window.__bancada.salvarAgora()); await page.waitForTimeout(1200); } catch {} }
+    else { try { await marcarFalha(prof, arq, e.message); } catch (e2) { log('   não deu para marcar a falha:', e2.message); } }
     throw e;
   } finally { await ctx.close(); }
 }
@@ -148,12 +178,13 @@ async function rerender(browser, prof, meta) {
   const f = proj.fluxo; if (!f?.bruto?.driveId || !f.saida?.driveId) return;
   const local = join(BRUTOS, f.bruto.driveId, f.bruto.nome);
   if (!existsSync(local)) { mkdirSync(join(BRUTOS, f.bruto.driveId), { recursive: true }); log(`[${prof}] ${proj.nome}: baixando o bruto (${(f.bruto.tamanho / 1e6).toFixed(0)} MB)`); await drive.baixar(f.bruto.driveId, local, f.bruto.tamanho); }
+  const usar = prepararBruto(local, join(BRUTOS, f.bruto.driveId, 'proxy', f.bruto.nome));
   const { page, ctx } = await abrirPagina(browser, prof);
   try {
     log(`[${prof}] ${proj.nome}: mesa mudou, renderizando de novo`);
     await page.evaluate(id => window.__bancada.abrirProjeto(id), meta.id);
     await page.waitForFunction(() => !!window.__E.pedido, null, { timeout: 30000 });
-    await page.setInputFiles('#arquivos', [local]);
+    await page.setInputFiles('#arquivos', [usar]);
     await esperarPronto(page, 20);
     const saida = join(SAIDAS, `${meta.id}.mp4`);
     const assinatura = await exportar(page, saida, 60);

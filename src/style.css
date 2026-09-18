@@ -526,6 +526,11 @@ button.chip:hover { background: var(--surface-3); }
 .reportes .reporte-texto { flex: 1 1 100%; color: var(--ink-2); }
 .reportes li .apoio { font-size: 11px; white-space: nowrap; }
 .projetos-cab #btDiario { text-decoration: none; }
+.robo-texto { flex: 1 1 100%; min-height: 0; }
+.robo-texto.rodando { color: var(--brand-2); }
+.robo-texto.rodando::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--brand-2); margin-right: 7px; vertical-align: 1px; animation: pulsa 1.2s ease-in-out infinite; }
+.robo-texto.ok { color: var(--green); }
+.robo-texto.erro { color: var(--red); }
 
 /* ---------- diário (diario.html) */
 .diario { max-width: 980px; margin: 24px auto; padding: 0 20px; display: grid; gap: 16px; }

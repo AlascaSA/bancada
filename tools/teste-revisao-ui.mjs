@@ -102,7 +102,7 @@ const m2 = await page.evaluate(() => ({ etapa: document.querySelector('#fluxoEta
 ok(m2.etapa.includes('renderizando') && m2.des, `mesa mudou → «${m2.etapa}», aprovar ${m2.des ? 'travado' : 'LIVRE'} (${m2.bt})`);
 // o diário lê o metadata da lista do KV, que demora até ~1 min para refletir a gravação: espera
 let diario = [];
-for (let t = 0; t < 12 && !diario.some(i => i.projeto === robo.id); t++) {
+for (let t = 0; t < 24 && !diario.some(i => i.projeto === robo.id); t++) {
   if (t) await page.waitForTimeout(8000);
   diario = await page.evaluate(async () => (await (await fetch('/api/feedback?professor=jaylton', { cache: 'no-store' })).json()).itens);
 }
@@ -124,10 +124,14 @@ await page.reload(); await page.waitForFunction(() => !!window.__E && window.__E
 ok((await page.evaluate(() => window.__E.regras)).includes('ênfase'), 'regras voltam do servidor e entram na revisão por IA');
 await page.evaluate(() => fetch('/api/regras/jaylton', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto: '', quem: 'Teste' }) }));
 await page.screenshot({ path: FOTOS + 'revisao-4-regras.png' });
+// 6b) «Rodar o robô agora»: chama o vigia e mostra o que ele achou
+await page.click('#btRobo');
+await page.waitForFunction(() => /nada novo|robô/.test(document.querySelector('#roboTexto').textContent) && !document.querySelector('#btRobo').disabled, null, { timeout: 30000 });
+ok(true, `botão do robô: «${await page.textContent('#roboTexto')}»`);
 // 7) diário: lista os reportes e o «Abrir na mesa» cai no ponto
 await page.goto(`${URL}/diario.html?professor=jaylton`);
 let nDiario = 0;
-for (let t = 0; t < 12; t++) { if (t) await page.waitForTimeout(8000); nDiario = await page.$$eval('.diario-lista li .tipo', l => l.filter(x => x.textContent.includes('cortou fala boa')).length); if (nDiario) break; else await page.reload(); }
+for (let t = 0; t < 24; t++) { if (t) await page.waitForTimeout(8000); nDiario = await page.$$eval('.diario-lista li .tipo', l => l.filter(x => x.textContent.includes('cortou fala boa')).length); if (nDiario) break; else await page.reload(); }
 ok(nDiario >= 1, `diário lista o reporte (${nDiario})`);
 await page.screenshot({ path: FOTOS + 'revisao-5-diario.png' });
 await page.click('.diario-lista li:has(.tipo:has-text("cortou fala boa")) a.bt');

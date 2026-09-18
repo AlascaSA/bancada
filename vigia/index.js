@@ -1,6 +1,7 @@
 // Vigia da Bancada — Cloudflare Worker com cron (grátis). A cada 5 min olha a pasta de brutos de cada
 // professor no Drive e a lista de projetos; se há bruto sem projeto, ou mesa pedindo render novo, dispara
 // o robô no GitHub Actions (workflow robo.yml). Não processa vídeo: só decide se vale acordar o robô.
+// POST = olhar agora (é o que o botão «Rodar o robô agora» da Bancada chama, via /api/robo); GET = {rodando}.
 // Segredos: GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REFRESH_TOKEN, GH_TOKEN.
 // Vars (wrangler.toml): BANCADA_SITE, GH_REPO, PROFS (JSON igual ao robo/pastas.json → profs).
 const API = 'https://www.googleapis.com/drive/v3';
@@ -49,7 +50,7 @@ export async function vigiar(env) {
     const rer = projetos.filter(p => p.fluxo?.pedirRender && p.fluxo.etapa !== 'entregue' && !p.fluxo.erro && Date.now() - (p.editadoEm || 0) > 90e3);
     if (rer.length) motivos.push(`${prof}: ${rer.length} mesa(s) para renderizar de novo`);
   }
-  if (!motivos.length) return { acordou: false, motivos };
+  if (!motivos.length) return { acordou: false, motivos, rodando: await roboRodando(env) };
   if (await roboRodando(env)) return { acordou: false, motivos, esperando: 'o robô já está rodando' };
   await acordarRobo(env);
   return { acordou: true, motivos };
@@ -59,6 +60,6 @@ export default {
   async scheduled(ev, env, ctx) { ctx.waitUntil(vigiar(env).then(r => console.log(JSON.stringify(r))).catch(e => console.error('vigia', e.message))); },
   async fetch(req, env) {
     if (req.method === 'POST') { try { return Response.json(await vigiar(env)); } catch (e) { return Response.json({ erro: e.message }, { status: 500 }); } }
-    return new Response('vigia da Bancada: POST para olhar agora', { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    try { return Response.json({ rodando: await roboRodando(env) }); } catch (e) { return Response.json({ erro: e.message }, { status: 500 }); }   // GET: o robô está numa volta?
   },
 };
