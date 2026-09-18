@@ -120,7 +120,13 @@ A equipe só sobe o bruto na pasta do Drive que já usa; o resto anda sozinho at
    subpasta **`Em revisão`** da própria pasta de brutos. Nome do editado pela cadeia do Playbook: **o do bruto
    sem o `BR-`** (`BR-inventários rentáveis.MOV` → `inventários rentáveis.mp4`). Projeto salvo com `fluxo` na
    etapa **Revisão do editor**; se o render falhar, o cartão mostra «o robô falhou» com o motivo, e apagar o
-   cartão faz ele tentar de novo. Uma volta por vez (`concurrency: robo`). O mesmo robô roda em qualquer máquina
+   cartão faz ele tentar de novo. Uma volta por vez (`concurrency: robo`). **Bruto que o Chrome não decodifica** (HEVC do
+   iPhone, ProRes, 10 bits) vira um proxy H.264/AAC pelo ffmpeg antes de entrar na mesa, sozinho — os tempos não
+   mudam, e o «Baixar o bruto do Drive» aceita o original mesmo com tamanho diferente. **Falha antes de a mesa
+   existir** (vídeo que não abre, sem áudio) vira um cartão «o robô falhou» com o motivo, para o vigia não acordar
+   o robô de novo a cada 5 min; apagar o cartão faz ele tentar de novo. **«Rodar o robô agora»** (botão na lista
+   de projetos) não espera a ronda: pede ao vigia para olhar as pastas já, mostra o que ele achou e a lista se
+   atualiza sozinha até o projeto aparecer. O mesmo robô roda em qualquer máquina
    (`node robo/robo.mjs --uma-vez`, WebKit no Mac); `robo/instalar.sh` continua existindo para quem quiser um
    Mac sempre ligado, mas não é o caminho principal. Subir um bruto sem abrir o Drive:
    `node robo/robo.mjs --subir <arquivo> <professor>`.
