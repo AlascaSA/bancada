@@ -107,9 +107,10 @@ do cabeçalho saíram da tela a pedido dele em 17/09/2026.
 
 A equipe só sobe o bruto na pasta do Drive que já usa; o resto anda sozinho até a revisão humana:
 
-1. **Pasta de brutos do professor** (Shared Drive Lançamentos; Jaylton: `… > 08. Vídeos brutos > Bancada`,
-   id `1vew1VlJ1ExEd9Te0lnvSIoWzWfO4UPQ1`). Quem grava solta o bruto ali. Pablo e André entram no `robo.json`
-   quando tiverem a pasta deles.
+1. **Pasta de brutos do professor** (Shared Drive Lançamentos, dentro da raiz de cada um:
+   `08. Vídeos brutos > Bancada`). Quem grava solta o bruto ali. Jaylton `1vew1VlJ1ExEd9Te0lnvSIoWzWfO4UPQ1`,
+   Pablo `1s7q4fue8F8vy9ZFErlEkM1s_JJN4jovg`, André `1FP6IX_vziCr4aQOWr5yZwmW8L3Gi3SZR`. Cada pasta é da aba
+   do professor correspondente na Bancada (o robô edita com o padrão dele).
 2. **Robô na nuvem, sem depender de Mac nenhum.** Dois pedaços: o **vigia** (`vigia/`, Cloudflare Worker com
    cron a cada 5 min, grátis) olha a pasta de brutos e a lista de projetos; se há bruto sem projeto ou mesa
    pedindo render novo, dispara o **robô** no GitHub Actions (`.github/workflows/robo.yml`, repo privado
@@ -130,8 +131,9 @@ A equipe só sobe o bruto na pasta do Drive que já usa; o resto anda sozinho at
    enquanto isso a aprovação fica travada.
 4. **Revisão final** — é de OUTRA pessoa: quem marcou «revisado» vê só o link (`?professor=<p>&revisar=<id>`
    abre o visualizador direto) e «Voltar atrás». Quem aprova clica «Aprovar e enviar ao Drive»: a função
-   `/api/drive/entregar` **move** o arquivo de `Em revisão` para a **pasta de entrega do professor** (Jaylton:
-   `… > Redes sociais > Bancada`, id `1oSEMar9FdA9U9ElLjE1FDsDQNSTGQryg`), sem reenviar; arquivo de mesmo
+   `/api/drive/entregar` **move** o arquivo de `Em revisão` para a **pasta de entrega do professor**
+   (`04. Conteúdo > Redes sociais > Bancada` de cada um: Jaylton `1oSEMar9FdA9U9ElLjE1FDsDQNSTGQryg`, Pablo
+   `1vqgG8tueTgRae_-SHsEqafPxbOZcVNHD`, André `1JdNkgFjIWwzj9dqsUB4t5ZYuCqXND9w0`), sem reenviar; arquivo de mesmo
    nome que já estivesse lá vai para a lixeira (como o Renomeador faz ao substituir). Nada chega na entrega sem
    passar pelas duas revisões. «Devolver ao editor» volta uma etapa.
 5. **«Não faz isso / faz sempre isso»** — dois canais. (a) Ao desligar um corte da IA a mesa pergunta

@@ -88,7 +88,12 @@ ok(fb.acao === 'manteve' && fb.porque === 'era ênfase, não erro' && typeof fb.
 await page.waitForFunction(() => document.querySelector('#chipSalvo').textContent === 'salvo' && window.__E.fluxo.pedirRender === true, null, { timeout: 20000 });
 const m2 = await page.evaluate(() => ({ etapa: document.querySelector('#fluxoEtapa').textContent, bt: document.querySelector('#fluxoAcoes .bt-primario').textContent, des: document.querySelector('#fluxoAcoes .bt-primario').disabled }));
 ok(m2.etapa.includes('renderizando') && m2.des, `mesa mudou → «${m2.etapa}», aprovar ${m2.des ? 'travado' : 'LIVRE'} (${m2.bt})`);
-const diario = await page.evaluate(async () => (await (await fetch('/api/feedback?professor=jaylton', { cache: 'no-store' })).json()).itens);
+// o diário lê o metadata da lista do KV, que demora até ~1 min para refletir a gravação: espera
+let diario = [];
+for (let t = 0; t < 12 && !diario.some(i => i.projeto === robo.id); t++) {
+  if (t) await page.waitForTimeout(8000);
+  diario = await page.evaluate(async () => (await (await fetch('/api/feedback?professor=jaylton', { cache: 'no-store' })).json()).itens);
+}
 ok(diario.some(i => i.projeto === robo.id && i.porque === 'era ênfase, não erro'), `diário do professor tem a correção (${diario.length} itens)`);
 
 // 5) religar o corte → volta ao render atual, feedback some, aprovar libera
