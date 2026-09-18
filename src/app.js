@@ -452,6 +452,7 @@ function desenharFita() {
       if (seg) previa.irPara(seg.saidaDe + Math.min(Math.max(x - seg.de, 0), seg.dur));
     });
     trilhos.append(trilho);
+    for (const r of E.reportes.filter(x => x.clipe === ci)) { const m = el('div', 'reporte-marca'); m.style.left = `${r.tClipe * PX_POR_S}px`; m.title = `${r.tipo}${r.texto ? ` · ${r.texto}` : ''} · ${r.quem || '—'}`; trilho.append(m); }
   });
   const agulha = el('div', 'agulha'); agulha.id = 'agulha'; fita.append(agulha);
   camada.style.width = `${trilhos.scrollWidth + 24}px`;
@@ -1148,13 +1149,12 @@ function desenharRevisao() {
   else if (f.etapa === 'final') ac.append(botao(f.pedirRender ? 'Aprovar (espera o render)' : 'Aprovar e enviar ao Drive', entregarDaRevisao, 'bt-primario', !!f.pedirRender), botao('Devolver ao editor', () => mudarEtapaRevisao('editor', 'devolvido ao editor')), botaoLink(proj.id));
   else if (f.etapa === 'entregue') { if (f.link) ac.append(linkDrive(f.link)); }
   else ac.append(botaoLink(proj.id));
-  ac.append(botao('Reportar erro', reportarNoVisualizador), botao('Abrir a mesa para ajustar', () => { fecharRevisao(false); abrirProjeto(proj.id); }), botao('Fechar', () => fecharRevisao(true), 'bt-fantasma'));
-  listaReportes($('#revisaoReportes'), proj.reportes || [], r => { const v = $('#revisaoVideo'); v.currentTime = r.tSaida; v.pause(); });
+  ac.append(botao('Abrir a mesa para ajustar', () => { fecharRevisao(false); abrirProjeto(proj.id); }), botao('Fechar', () => fecharRevisao(true), 'bt-fantasma'));
   $('#revisaoAviso').textContent = f.etapa !== 'entregue' && f.pedirRender ? 'A aprovação libera quando o render novo terminar.' : '';
 }
 function fecharRevisao(voltar) {
   const v = $('#revisaoVideo'); v.pause(); v.removeAttribute('src'); delete v.dataset.src; v.load();
-  E.revisando = null; $('#revisao').hidden = true; $('#reporteRev').hidden = true;
+  E.revisando = null; $('#revisao').hidden = true;
   if (voltar) { $('#soltaTexto').hidden = false; desenharProjetos(); }
 }
 function anotarRevisando(quem) { const p = E.revisando; anotarRecente({ id: p.id, nome: p.nome, editadoEm: p.editadoEm || Date.now(), editadoPor: quem, duracao: p.duracao, brutos: p.brutos.length, midiaEm: p.midiaEm || 0, fluxo: resumoFluxo(p.fluxo), feedback: (p.feedback || []).length }); }
@@ -1178,7 +1178,7 @@ async function entregarDaRevisao() {
   } catch (e) { mostrarErro(`Não deu para enviar ao Drive: ${e.message}`); }
   desenharRevisao();
 }
-// ---------- reportar erro num ponto do vídeo (visualizador e mesa): vai para o projeto, para o diário e para a revisão por IA
+// ---------- reportar erro num ponto do vídeo (na fita da mesa): vai para o projeto, para o diário e para a revisão por IA
 const TIPOS_REPORTE = ['cortou fala boa', 'deixou erro passar', 'legenda errada', 'legenda fora de tempo', 'outro'];
 const fmtV = t => fmt(t).replace('.', ',');
 function tempoClipeDe(segmentos, tSaida) {
@@ -1224,21 +1224,20 @@ function reportarNaMesa() {
   formReporte($('#reporteMesa'), t, r => {
     const quem = nomeQuem(); if (quem == null) return;
     E.reportes.push(novoReporte(r, t, E.segmentos, E.clipes, quem)); salvoAss = ''; tentarSalvar(true);
+    desenharReportesNaFita();
     listaReportes($('#mesaReportes'), E.reportes, x => previa.irPara(tempoSaidaDe(E.segmentos, x.clipe, x.tClipe)));
   });
 }
-function reportarNoVisualizador() {
-  const proj = E.revisando, v = $('#revisaoVideo'); if (!proj) return;
-  v.pause();
-  const t = v.currentTime || 0;
-  formReporte($('#reporteRev'), t, async r => {
-    const quem = nomeQuem(); if (quem == null) return;
-    const segs = montarSegmentos(proj.brutos, proj.cortes || []);
-    proj.reportes = [...(proj.reportes || []), novoReporte(r, t, segs, proj.brutos, quem)];
-    try { proj.editadoPor = quem; const g = await gravar(proj); proj.editadoEm = g.editadoEm; anotarRevisando(quem); }
-    catch (e) { mostrarErro(`Não salvou o reporte: ${e.message}`); }
-    listaReportes($('#revisaoReportes'), proj.reportes, x => { v.currentTime = x.tSaida; v.pause(); });
-  });
+// os reportes viram marcas na fita, no ponto do bruto (clique na fita já leva ao ponto)
+function desenharReportesNaFita() {
+  const trilhos = $('#fita').querySelectorAll('.trilho');
+  trilhos.forEach(t => t.querySelectorAll('.reporte-marca').forEach(m => m.remove()));
+  for (const r of E.reportes) {
+    const tr = trilhos[r.clipe]; if (!tr) continue;
+    const m = el('div', 'reporte-marca'); m.style.left = `${r.tClipe * PX_POR_S}px`;
+    m.title = `${r.tipo}${r.texto ? ` · ${r.texto}` : ''} · ${r.quem || '—'}`;
+    tr.append(m);
+  }
 }
 // regras do professor («não faz isso», «faz sempre isso»)
 async function carregarRegras() {

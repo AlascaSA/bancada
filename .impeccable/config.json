@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "repeating-stripes-gradient",
+        "value": "*",
+        "files": [
+          "diario.html"
+        ],
+        "createdAt": "2026-09-18T13:08:41.801Z",
+        "reason": "Claude: diario.html só carrega o style.css compartilhado da Bancada; as faixas são da fita de filme da mesa, aprovada pelo Gustavo, e a página do diário não usa essa classe"
+      },
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "diario.html"
+        ],
+        "createdAt": "2026-09-18T13:08:41.863Z",
+        "reason": "Claude: brilho vem do style.css compartilhado da Bancada (chips e prévia da mesa, aprovados pelo Gustavo); diario.html não define sombra nenhuma"
+      }
+    ]
+  }
+}

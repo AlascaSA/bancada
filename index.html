@@ -72,8 +72,6 @@
                 <ol class="historico" id="revisaoHistorico"></ol>
                 <div class="revisao-acoes" id="revisaoAcoes"></div>
                 <p class="apoio" id="revisaoAviso"></p>
-                <div class="reporte" id="reporteRev" hidden></div>
-                <ul class="reportes" id="revisaoReportes" hidden></ul>
               </div>
             </div>
           </div>
@@ -135,6 +133,7 @@
       <div class="bloco-cab">
         <h2>Fita</h2>
         <span class="apoio" id="fitaResumo"></span>
+        <button class="bt bt-mini" id="btReportar" type="button" title="Reportar um erro no ponto em que a prévia está; o reporte vira uma marca na fita">Reportar erro</button>
       </div>
       <div class="fita" id="fita"></div>
       <div class="duas">
@@ -167,7 +166,6 @@
         </button>
         <input type="range" id="scrub" min="0" max="1000" value="0" step="1" aria-label="Posição">
         <span class="tnum apoio" id="tempoPrevia">0:00 / 0:00</span>
-        <button class="bt bt-mini" id="btReportar" type="button" title="Reportar um erro neste ponto do vídeo">Reportar erro</button>
       </div>
       <div class="reporte" id="reporteMesa" hidden></div>
       <ul class="reportes" id="mesaReportes" hidden></ul>

@@ -38,17 +38,6 @@ await page.waitForFunction(() => { const v = document.querySelector('#revisaoVid
 const vis = await page.evaluate(() => ({ nome: document.querySelector('#revisaoNome').textContent, etapa: document.querySelector('#revisaoEtapa').textContent, dur: document.querySelector('#revisaoVideo').duration, botoes: [...document.querySelectorAll('#revisaoAcoes .bt')].map(b => b.textContent) }));
 ok(vis.dur > 1, `visualizador toca o MP4 do Drive: «${vis.nome}» ${vis.dur.toFixed(1)} s · ${vis.etapa} · ${vis.botoes.join(' / ')}`);
 await page.screenshot({ path: FOTOS + 'revisao-1-visualizador.png' });
-// 1b) reportar erro no visualizador: ponto do vídeo, tipo, texto → projeto, com o trecho transcrito
-await page.evaluate(() => { const v = document.querySelector('#revisaoVideo'); v.currentTime = 5; });
-await page.click('#revisaoAcoes .bt:has-text("Reportar erro")');
-await page.waitForSelector('#reporteRev:not([hidden])');
-await page.click('#reporteRev .porque-chip:has-text("cortou fala boa")');
-await page.fill('#reporteRev textarea', 'ele explica isso e a IA tirou');
-await page.click('#reporteRev .bt-primario');
-await page.waitForSelector('#revisaoReportes li', { timeout: 20000 });
-const rep1 = (await page.evaluate(async id => (await (await fetch(`/api/projetos/${id}?professor=jaylton`, { cache: 'no-store' })).json()).reportes, robo.id))[0];
-ok(rep1 && rep1.tipo === 'cortou fala boa' && Math.abs(rep1.tSaida - 5) < 0.3 && rep1.trecho.length > 0 && rep1.quem === 'Teste', `reporte no visualizador salvo: ${rep1?.tipo} · ${rep1?.tSaida} s → clipe ${rep1?.clipe} ${rep1?.tClipe} s · «${(rep1?.trecho || '').slice(0, 50)}»`);
-await page.screenshot({ path: FOTOS + 'revisao-1b-reporte.png' });
 
 // 2) editor marca como revisado → revisão final
 await page.click('#revisaoAcoes .bt-primario');
@@ -88,11 +77,14 @@ await page.screenshot({ path: FOTOS + 'revisao-2-mesa.png' });
 await page.evaluate(() => window.__previa.irPara(3));
 await page.click('#btReportar');
 await page.waitForSelector('#reporteMesa:not([hidden])');
-await page.click('#reporteMesa .porque-chip:has-text("legenda errada")');
+await page.click('#reporteMesa .porque-chip:has-text("cortou fala boa")');
+await page.fill('#reporteMesa textarea', 'ele explica isso e a IA tirou');
 await page.click('#reporteMesa .bt-primario');
-await page.waitForFunction(() => window.__E.reportes.length === 2 && document.querySelector('#chipSalvo').textContent === 'salvo', null, { timeout: 20000 });
-const rep2 = await page.evaluate(() => window.__E.reportes[1]);
-ok(rep2.tipo === 'legenda errada' && Math.abs(rep2.tSaida - 3) < 0.3 && !(await page.isHidden('#mesaReportes')), `reporte na mesa salvo: ${rep2.tipo} · ${rep2.tSaida} s · lista com ${await page.$$eval('#mesaReportes li', l => l.length)} itens`);
+await page.waitForFunction(() => window.__E.reportes.length === 1 && document.querySelector('#chipSalvo').textContent === 'salvo', null, { timeout: 20000 });
+const rep1 = await page.evaluate(() => window.__E.reportes[0]);
+ok(rep1.tipo === 'cortou fala boa' && Math.abs(rep1.tSaida - 3) < 0.3 && rep1.trecho.length > 0 && !(await page.isHidden('#mesaReportes')), `reporte na mesa salvo: ${rep1.tipo} · ${rep1.tSaida} s → clipe ${rep1.clipe} ${rep1.tClipe} s · «${rep1.trecho.slice(0, 40)}»`);
+ok((await page.$$eval('#fita .reporte-marca', m => m.length)) === 1, 'marca do reporte na fita');
+await page.screenshot({ path: FOTOS + 'revisao-3b-reporte-fita.png' });
 
 // 4) desligar um corte da IA → «Por quê?» → chip → feedback; a mesa passa a pedir render
 const n = await page.evaluate(() => window.__E.cortes.filter(k => k.ligado && k.tipo !== 'manual').length);

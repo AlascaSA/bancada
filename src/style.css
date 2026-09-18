@@ -380,7 +380,7 @@ body.aurora::before {
 .cue-pino { width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 6px; background: color-mix(in oklab, var(--brand) 16%, transparent); color: var(--brand-2); cursor: pointer; }
 .cue-pino:hover { background: color-mix(in oklab, var(--brand) 30%, transparent); }
 .cue-pino .ico { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.controles { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; }
+.controles { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; }
 .controles input[type="range"] { width: 100%; }
 .exportar { display: grid; gap: 10px; }
 .resultado { display: grid; gap: 10px; padding: 12px; border-radius: var(--raio); background: color-mix(in oklab, var(--green) 10%, var(--elev)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--green) 40%, transparent); }
@@ -505,7 +505,10 @@ button.chip:hover { background: var(--surface-3); }
 .marca:hover .marca-nome { color: var(--brand-2); }
 .marca:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
 
-/* ---------- reportar erro num ponto do vídeo */
+/* ---------- reportar erro num ponto do vídeo (marca na fita) */
+.reporte-marca { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1px; background: var(--amber); box-shadow: 0 0 0 1px rgba(0, 0, 0, .55); z-index: 5; pointer-events: none; }
+.reporte-marca::before { content: ""; position: absolute; top: 3px; left: 50%; width: 11px; height: 11px; margin-left: -5.5px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 2px rgba(0, 0, 0, .6); }
+.bloco-cab #btReportar { margin-left: auto; }
 .reporte { display: grid; gap: 10px; padding: 12px 14px; border-radius: var(--raio); background: color-mix(in oklab, var(--amber) 8%, var(--elev)); border: 1px solid color-mix(in oklab, var(--amber) 40%, var(--border)); }
 .reporte-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .reporte-chips { display: flex; flex-wrap: wrap; gap: 6px; }
