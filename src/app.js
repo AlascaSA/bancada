@@ -899,7 +899,7 @@ function iniciarAutosave() {
 async function tentarSalvar(forcar) {
   if (!E.projeto || salvando || (E.fase !== 'pronto' && E.fase !== 'exportando')) return;
   // mesa mudou depois do render do robô → pede render novo (o robô lê isso na lista); voltou ao que estava → não pede
-  if (E.fluxo?.saida?.assinatura && !E.robo && E.fluxo.etapa !== 'entregue') { const pedir = assinaturaPlano() !== E.fluxo.saida.assinatura; if (pedir !== !!E.fluxo.pedirRender) { E.fluxo.pedirRender = pedir; desenharFluxo(); } }
+  if (E.fluxo?.saida?.assinatura && !E.robo && E.fluxo.etapa !== 'entregue') { const pedir = assinaturaPlano() !== E.fluxo.saida.assinatura; if (pedir !== !!E.fluxo.pedirRender && !(pedir && E.fluxo.renderErro?.n >= 2)) { E.fluxo.pedirRender = pedir; desenharFluxo(); } }
   const a = assinaturaProjeto();
   if (a === salvoAss) return;
   if (!forcar && a !== vistaAss) { vistaAss = a; estadoSalvar('pendente', 'não salvo'); return; }
@@ -1098,9 +1098,10 @@ function desenharFluxo() {
   const sec = $('#fluxo'), f = E.fluxo;
   if (!f) { sec.hidden = true; return; }
   sec.hidden = false; pintarEtapa($('#fluxoEtapa'), f);
-  const atual = renderAtual(f);
-  $('#fluxoTexto').textContent = textoFluxo(f) + (f.etapa !== 'entregue' && f.saida ? (atual ? ' O vídeo em revisão é exatamente esta mesa.' : ' A mesa mudou depois do render: o robô renderiza de novo sozinho quando você parar de mexer.') : '');
+  const atual = renderAtual(f), travado = !atual && f.renderErro && f.renderErro.n >= 2;
+  $('#fluxoTexto').textContent = textoFluxo(f) + (f.etapa !== 'entregue' && f.saida ? (atual ? ' O vídeo em revisão é exatamente esta mesa.' : travado ? ` O render automático falhou ${f.renderErro.n} vezes e parou (${f.renderErro.msg}).` : ' A mesa mudou depois do render: o robô renderiza de novo sozinho quando você parar de mexer.') : '');
   const ac = $('#fluxoAcoes'); ac.innerHTML = '';
+  if (travado) ac.append(botao('Tentar o render de novo', () => { f.renderErro = null; f.pedirRender = true; salvoAss = ''; tentarSalvar(true); desenharFluxo(); }));
   if (f.etapa === 'editor') ac.append(botao('Marcar como revisado', () => mudarEtapa('final', 'revisado pelo editor'), 'bt-primario'));
   if (f.etapa === 'final' && souOEditor(f)) ac.append(botaoLink(E.projeto.id), botao('Voltar atrás', () => mudarEtapa('editor', 'voltou atrás'), 'bt-fantasma'));
   else if (f.etapa === 'final') ac.append(botao(atual ? 'Aprovar e enviar ao Drive' : 'Aprovar (espera o render)', entregarDaMesa, 'bt-primario', !atual), botao('Devolver ao editor', () => mudarEtapa('editor', 'devolvido ao editor')), botaoLink(E.projeto.id));
@@ -1246,7 +1247,7 @@ function desenharReportesNaFita() {
 let vigiaRoboId = null;
 function estadoRobo(texto, classe = '') { const t = $('#roboTexto'); t.textContent = texto; t.className = `apoio robo-texto ${classe}`; }
 async function carregarRobo() {
-  try { const e = await (await fetch('/api/robo', { cache: 'no-store' })).json(); if (e.rodando) { estadoRobo('o robô está editando agora; o projeto aparece aqui quando terminar.', 'rodando'); vigiarProjetosNovos(); } } catch {}
+  try { const e = await (await fetch('/api/robo', { cache: 'no-store' })).json(); if (e.rodando) estadoRobo('o robô está editando agora; recarregue daqui a alguns minutos.', 'rodando'); } catch {}
 }
 async function rodarRoboAgora() {
   const bt = $('#btRobo'); bt.disabled = true; estadoRobo('olhando as pastas do Drive…');
@@ -1261,15 +1262,15 @@ async function rodarRoboAgora() {
   } catch (e) { estadoRobo(`não deu para acordar o robô: ${e.message}`, 'erro'); }
   finally { bt.disabled = false; }
 }
-// enquanto o robô trabalha, a lista se atualiza sozinha (a cada 20 s, por até 25 min) e avisa quando aparece cartão novo
+// depois do clique, a lista se atualiza sozinha (a cada 90 s, por até 12 min) e avisa quando aparece cartão novo
 function vigiarProjetosNovos() {
   if (vigiaRoboId) return;
   const antes = new Set([...document.querySelectorAll('.projeto')].map(a => a.dataset.id)), t0 = Date.now();
   vigiaRoboId = setInterval(async () => {
-    if (E.fase !== 'vazio' || Date.now() - t0 > 25 * 60e3) { clearInterval(vigiaRoboId); vigiaRoboId = null; return; }
+    if (E.fase !== 'vazio' || Date.now() - t0 > 12 * 60e3) { clearInterval(vigiaRoboId); vigiaRoboId = null; return; }
     await desenharProjetos();
     if ([...document.querySelectorAll('.projeto')].some(a => !antes.has(a.dataset.id) && a.querySelector('.etapa-chip'))) { clearInterval(vigiaRoboId); vigiaRoboId = null; estadoRobo('o robô terminou: projeto novo na lista.', 'ok'); }
-  }, 60000);   // cada volta é 1 list no KV (1.000/dia grátis)
+  }, 90000);   // 8 voltas no máximo: a lista tem cache de 45 s no servidor, mas cada consulta fora do cache é 1 list no KV (1.000/dia grátis)
 }
 function ligarRobo() { $('#btRobo').addEventListener('click', rodarRoboAgora); }
 // regras do professor («não faz isso», «faz sempre isso»)
@@ -1564,8 +1565,7 @@ async function iniciar() {
   ligarRegras();
   carregarRegras();
   ligarRobo();
-  carregarRobo();
-  desenharProjetos();
+  if (!E.robo) { carregarRobo(); desenharProjetos(); }   // o robô não precisa da lista (1 list no KV) nem de vigiar a si mesmo
   // chegou pelo link de revisão (?revisar=<id>): abre o visualizador direto e limpa o parâmetro da barra
   if (Q.get('revisar')) { const id = Q.get('revisar'); history.replaceState(null, '', `${location.pathname}?professor=${E.professor}`); abrirRevisao(id); }
   // veio do diário: abre o projeto (pede os brutos ou o Drive) e, na mesa, vai para o ponto reportado

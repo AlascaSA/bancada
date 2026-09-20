@@ -14,7 +14,7 @@
 // Uso: node robo.mjs --uma-vez            (uma volta e sai — é assim que a nuvem roda)
 //      node robo.mjs                      (fica rodando, uma volta a cada 2 min)
 //      node robo.mjs --subir <arquivo> <professor>  (sobe um bruto para a pasta do professor)
-import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import { join, dirname, extname } from 'node:path';
@@ -52,7 +52,9 @@ async function api(caminho, init) {
   if (!r.ok) throw new Error(`Bancada ${r.status} ${caminho}: ${(await r.text()).slice(0, 200)}`);
   return r.json();
 }
-const listarProjetos = prof => api(`/api/projetos?professor=${prof}`).then(d => d.projetos);
+const listarTodos = () => api('/api/projetos?professor=todos').then(d => d.projetos);   // 1 list no KV para os 3 professores (1.000/dia grátis)
+// lê o projeto inteiro (a lista só traz o resumo), aplica `mudar(fluxo)` e grava
+const mudarFluxo = async (prof, id, mudar) => { const p = await api(`/api/projetos/${id}?professor=${prof}`); p.fluxo = { ...(p.fluxo || {}), ...mudar(p.fluxo || {}) }; await api(`/api/projetos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) }); };
 
 // ---- navegador: uma página da Bancada publicada, muda, com nome «Robô»
 async function abrirNavegador() {
@@ -76,8 +78,11 @@ async function abrirPagina(browser, prof) {
   return { page, ctx, erros };
 }
 async function esperarPronto(page, minutos) {
-  await page.waitForFunction(() => window.__E.fase === 'pronto' || window.__E.fase === 'erro', null, { timeout: minutos * 60e3, polling: 1000 });
-  if (await page.evaluate(() => window.__E.fase) === 'erro') throw new Error('a mesa falhou: ' + await page.evaluate(() => document.querySelector('#erroTexto')?.textContent));
+  // também sai na hora se o painel «Abrir projeto» recusou o arquivo (senão eram 20 min de espera por nada)
+  await page.waitForFunction(() => window.__E.fase === 'pronto' || window.__E.fase === 'erro' || (window.__E.pedido && document.querySelector('#pedidoAviso')?.textContent), null, { timeout: minutos * 60e3, polling: 1000 });
+  const fase = await page.evaluate(() => window.__E.fase);
+  if (fase === 'erro') throw new Error('a mesa falhou: ' + await page.evaluate(() => document.querySelector('#erroTexto')?.textContent));
+  if (fase !== 'pronto') throw new Error('o projeto recusou o arquivo: ' + await page.evaluate(() => document.querySelector('#pedidoAviso')?.textContent));
 }
 async function exportar(page, destino, minutos) {
   await page.click('#btExportar');
@@ -184,8 +189,10 @@ async function rerender(browser, prof, meta) {
     log(`[${prof}] ${proj.nome}: mesa mudou, renderizando de novo`);
     await page.evaluate(id => window.__bancada.abrirProjeto(id), meta.id);
     await page.waitForFunction(() => !!window.__E.pedido, null, { timeout: 30000 });
+    // o projeto casa bruto por nome+tamanho; o proxy refeito pode ter tamanho diferente do que a mesa gravou — aqui o id do Drive é a prova
+    await page.evaluate(([nome, tamanho]) => { for (const b of window.__E.pedido.proj.brutos) if (b.nome === nome) b.tamanho = tamanho; }, [f.bruto.nome, statSync(usar).size]);
     await page.setInputFiles('#arquivos', [usar]);
-    await esperarPronto(page, 20);
+    await esperarPronto(page, 10);
     const saida = join(SAIDAS, `${meta.id}.mp4`);
     const assinatura = await exportar(page, saida, 60);
     await drive.subir(saida, f.saida.nome, f.saida.pastaId, f.saida.driveId);
@@ -197,9 +204,10 @@ async function rerender(browser, prof, meta) {
 }
 
 async function volta(browser) {
+  let todos;
+  try { todos = await listarTodos(); } catch (e) { log(`lista falhou: ${e.message}`); return; }
   for (const prof of Object.keys(CFG.profs)) {
-    let projetos;
-    try { projetos = await listarProjetos(prof); } catch (e) { log(`[${prof}] lista falhou: ${e.message}`); continue; }
+    const projetos = todos.filter(p => p.professor === prof);
     const jaFeitos = new Set(projetos.map(p => p.fluxo?.brutoId).filter(Boolean));
     let arquivos;
     try { arquivos = await drive.listarVideos(CFG.profs[prof].brutos); } catch (e) { log(`[${prof}] Drive falhou: ${e.message}`); continue; }
@@ -215,8 +223,13 @@ async function volta(browser) {
         log(`[${prof}] ${arq.name}: FALHOU (${estado.falhas[arq.id].n}/${MAX_FALHAS}): ${e.message}`);
       }
     }
-    for (const p of projetos.filter(p => p.fluxo?.pedirRender && p.fluxo.etapa !== 'entregue' && !p.fluxo.erro && Date.now() - p.editadoEm > QUIETO)) {
-      try { await rerender(browser, prof, p); } catch (e) { log(`[${prof}] ${p.nome}: rerender FALHOU: ${e.message}`); }
+    // render de novo: só o que a mesa pediu, ficou 90 s parado e ainda não falhou 2 vezes (senão vira laço: cada volta são minutos do GitHub)
+    for (const p of projetos.filter(p => p.fluxo?.pedirRender && p.fluxo.etapa !== 'entregue' && !p.fluxo.erro && !(p.fluxo.renderErro >= 2) && Date.now() - p.editadoEm > QUIETO)) {   // na lista, renderErro é o número de falhas
+      try { await rerender(browser, prof, p); }
+      catch (e) {
+        log(`[${prof}] ${p.nome}: rerender FALHOU: ${e.message}`);
+        try { await mudarFluxo(prof, p.id, f => { const n = (f.renderErro?.n || 0) + 1; return { renderErro: { n, quando: Date.now(), msg: String(e.message).slice(0, 300) }, ...(n >= 2 ? { pedirRender: false } : {}) }; }); } catch (e2) { log('   não deu para anotar a falha:', e2.message); }
+      }
     }
   }
 }

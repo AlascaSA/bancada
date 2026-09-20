@@ -50,7 +50,7 @@ export function metadados(proj) {
   return {
     nome: String(proj.nome || '').slice(0, 80), editadoEm: proj.editadoEm, editadoPor: String(proj.editadoPor || '').slice(0, 40),
     duracao: +proj.duracao || 0, brutos: (proj.brutos || []).length, midiaEm: +proj.midiaEm || 0,
-    fluxo: f ? { etapa: f.etapa || 'editor', pedirRender: !!f.pedirRender, brutoId: f.bruto?.driveId || '', saida: !!f.saida?.driveId, link: f.link || '', erro: f.erro ? String(f.erro).slice(0, 200) : '' } : null,
+    fluxo: f ? { etapa: f.etapa || 'editor', pedirRender: !!f.pedirRender, brutoId: f.bruto?.driveId || '', saida: !!f.saida?.driveId, link: f.link || '', erro: f.erro ? String(f.erro).slice(0, 200) : '', renderErro: f.renderErro?.n || 0 } : null,
     feedback: (proj.feedback || []).length + (proj.reportes || []).length,
   };
 }

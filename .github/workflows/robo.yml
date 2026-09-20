@@ -13,7 +13,7 @@ concurrency:
 jobs:
   robo:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 40   # uma volta normal leva 1–3 min por vídeo; o teto evita queimar os 2.000 min/mês da org num laço
     steps:
       - uses: actions/checkout@v4
 

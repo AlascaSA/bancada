@@ -45,7 +45,7 @@ def chave_groq():
 def _metadados(d):
     f = d.get("fluxo")
     return {"id": d["id"], "nome": d.get("nome", ""), "editadoEm": d.get("editadoEm", 0), "editadoPor": d.get("editadoPor", ""), "duracao": d.get("duracao", 0), "brutos": len(d.get("brutos", [])), "midiaEm": d.get("midiaEm", 0),
-            "fluxo": ({"etapa": f.get("etapa", "editor"), "pedirRender": bool(f.get("pedirRender")), "brutoId": (f.get("bruto") or {}).get("driveId", ""), "saida": bool((f.get("saida") or {}).get("driveId")), "link": f.get("link", ""), "erro": (f.get("erro") or "")[:200]} if f else None),
+            "fluxo": ({"etapa": f.get("etapa", "editor"), "pedirRender": bool(f.get("pedirRender")), "brutoId": (f.get("bruto") or {}).get("driveId", ""), "saida": bool((f.get("saida") or {}).get("driveId")), "link": f.get("link", ""), "erro": (f.get("erro") or "")[:200], "renderErro": (f.get("renderErro") or {}).get("n", 0)} if f else None),
             "feedback": len(d.get("feedback") or []) + len(d.get("reportes") or [])}
 
 
@@ -91,12 +91,15 @@ class H(http.server.BaseHTTPRequestHandler):
         def js(obj, status=200): responde(status, json.dumps(obj).encode())
         if not partes:
             if metodo != "GET" or not re.fullmatch(r"[a-z]{2,20}", prof): return js({"erro": "professor"}, 400)
-            pasta = os.path.join(raiz, prof); lista = []
-            if os.path.isdir(pasta):
+            # professor=todos → todas as pastas, com o campo professor (como a Pages Function)
+            pastas = [(p, os.path.join(raiz, p)) for p in (os.listdir(raiz) if os.path.isdir(raiz) else []) if p != "midia"] if prof == "todos" else [(prof, os.path.join(raiz, prof))]
+            lista = []
+            for pr, pasta in pastas:
+                if not os.path.isdir(pasta): continue
                 for a in os.listdir(pasta):
                     if a.endswith(".json"):
                         with open(os.path.join(pasta, a), encoding="utf-8") as f: d = json.load(f)
-                        lista.append(_metadados(d))
+                        lista.append(dict(_metadados(d), **({"professor": pr} if prof == "todos" else {})))
             lista.sort(key=lambda x: -x["editadoEm"])
             return js({"projetos": lista})
         pid = partes[0]

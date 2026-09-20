@@ -18,6 +18,11 @@ export async function onRequest({ request, env, params }) {
     // professor=todos → uma listagem só (o vigia usa: list é 1.000/dia no plano grátis, não gastar 1 por professor)
     const prof = url.searchParams.get('professor') || '', todos = prof === 'todos';
     if (!todos && !PROF.test(prof)) return json({ erro: 'professor' }, 400);
+    // cache de 45 s por professor no Cloudflare (a listagem do KV já é eventual em ~60 s; a Bancada completa com o que
+    // este navegador acabou de salvar): recarregar a página, trocar de professor e o vigia não gastam 1 list cada
+    const cache = caches.default, chaveCache = new Request(`https://bancada-cache.invalid/projetos/${todos ? 'todos' : prof}`);
+    const guardado = await cache.match(chaveCache);
+    if (guardado) return new Response(guardado.body, { headers: { 'Content-Type': 'application/json', 'X-Cache': 'hit', ...SEM_CACHE } });
     const lista = [];
     let cursor;
     do {
@@ -26,7 +31,9 @@ export async function onRequest({ request, env, params }) {
       cursor = r.list_complete ? null : r.cursor;
     } while (cursor);
     lista.sort((a, b) => (b.editadoEm || 0) - (a.editadoEm || 0));
-    return json({ projetos: lista });
+    const corpo = JSON.stringify({ projetos: lista });
+    await cache.put(chaveCache, new Response(corpo, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=45' } }));
+    return new Response(corpo, { headers: { 'Content-Type': 'application/json', 'X-Cache': 'miss', ...SEM_CACHE } });
   }
   const [id, sub] = partes;
   if (!ID.test(id)) return json({ erro: 'id' }, 400);

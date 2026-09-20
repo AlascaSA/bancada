@@ -49,7 +49,7 @@ export async function vigiar(env) {
     tok = tok || await token(env);
     const novos = (await videosNaPasta(tok, P.brutos)).filter(v => !feitos.has(v.id));
     if (novos.length) motivos.push(`${prof}: ${novos.length} bruto(s) novo(s) (${novos.map(v => v.name).join(', ').slice(0, 120)})`);
-    const rer = projetos.filter(p => p.fluxo?.pedirRender && p.fluxo.etapa !== 'entregue' && !p.fluxo.erro && Date.now() - (p.editadoEm || 0) > 90e3);
+    const rer = projetos.filter(p => p.fluxo?.pedirRender && p.fluxo.etapa !== 'entregue' && !p.fluxo.erro && !(p.fluxo.renderErro >= 2) && Date.now() - (p.editadoEm || 0) > 90e3);
     if (rer.length) motivos.push(`${prof}: ${rer.length} mesa(s) para renderizar de novo`);
   }
   if (!motivos.length) return { acordou: false, motivos, rodando: await roboRodando(env) };
