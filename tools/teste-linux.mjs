@@ -4,7 +4,9 @@ import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
 import { statSync } from 'node:fs';
 const SITE = (process.env.BANCADA_SITE || 'https://bancada-6x9.pages.dev').replace(/\/$/, '');
-const CLIPE = new URL('../teste/01.mp4', import.meta.url).pathname;
+// o clipe de teste é gerado na hora (barras + tom de 1 kHz, 20 s, 1080x1920): o repositório é público e não leva filmagem de gente
+const CLIPE = (process.env.RUNNER_TEMP || '/tmp') + '/clipe-teste.mp4';
+execFileSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1080x1920:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=1000:sample_rate=48000', '-t', '20', '-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', CLIPE]);
 const DESTINO = process.env.RUNNER_TEMP ? process.env.RUNNER_TEMP + '/teste-linux.mp4' : '/tmp/teste-linux.mp4';
 const browser = await chromium.launch({ channel: process.env.BANCADA_NAVEGADOR === 'chromium' ? undefined : 'chrome' });
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
