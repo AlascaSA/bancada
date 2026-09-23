@@ -8,6 +8,9 @@ export async function onRequestGet({ request, env }) {
   if (!env.PROJETOS) return json({ erro: 'sem KV' }, 503);
   const prof = new URL(request.url).searchParams.get('professor') || '';
   if (!/^[a-z]{2,20}$/.test(prof)) return json({ erro: 'professor' }, 400);
+  const cache = caches.default, chaveCache = new Request(`https://bancada-cache.invalid/feedback/${prof}`);
+  const guardado = await cache.match(chaveCache);
+  if (guardado) return new Response(guardado.body, { headers: { 'Content-Type': 'application/json', 'X-Cache': 'hit', ...SEM_CACHE } });
   const chaves = [];
   let cursor;
   do {
@@ -22,5 +25,7 @@ export async function onRequestGet({ request, env }) {
     for (const r of p?.reportes || []) itens.push({ fonte: 'reporte', projeto: p.id, nome: p.nome, bruto: p.brutos?.[r.clipe]?.nome || '', ...r });
   }
   itens.sort((a, b) => (b.quando || 0) - (a.quando || 0));
-  return json({ itens });
+  const corpo = JSON.stringify({ itens });
+  await cache.put(chaveCache, new Response(corpo, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=45' } }));
+  return new Response(corpo, { headers: { 'Content-Type': 'application/json', 'X-Cache': 'miss', ...SEM_CACHE } });
 }

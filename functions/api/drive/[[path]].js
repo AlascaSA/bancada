@@ -7,7 +7,11 @@ const SEM_CACHE = { 'Cache-Control': 'no-store' };
 const json = (o, status = 200) => Response.json(o, { status, headers: SEM_CACHE });
 const DRIVE_ID = /^[A-Za-z0-9_-]{10,80}$/, ID = /^[a-z0-9]{6,40}$/i, PROF = /^[a-z]{2,20}$/;
 
-export async function onRequest({ request, env, params }) {
+export async function onRequest(ctx) {
+  try { return await atender(ctx); }
+  catch (e) { const vencido = /invalid_grant/.test(e.message); return json({ erro: vencido ? 'o acesso ao Drive venceu: rode robo/reautorizar.sh' : e.message, drive: vencido ? 'vencido' : 'erro' }, 503); }
+}
+async function atender({ request, env, params }) {
   if (!configurado(env)) return json({ erro: 'Drive não configurado no servidor' }, 503);
   const [rota, id] = params.path || [], m = request.method;
   if (rota === 'arquivo' || rota === 'meta') {

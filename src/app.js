@@ -2,7 +2,7 @@
 import { abrirClipe, miniaturas, audioMono16k, primeiroQuadro, abrirTransicao } from './media.js';
 import { envelope, limiarOtsu, silencios, fracaoFala, Energia } from './energy.js';
 import { wav16, transcrever, transcreverFatiado } from './transcribe.js';
-import { planejarCortes, montarSegmentos, corteManual, ROTULO, reservarIds } from './cuts.js';
+import { planejarCortes, montarSegmentos, corteManual, ROTULO, reservarIds, cadeiasDeTentativas } from './cuts.js';
 import { listar, carregar, gravar, gravarMidia, apagar, urlMidia, novoId, empacotarEnvelope, desempacotarEnvelope, mesmoArquivo, haQuanto } from './projetos.js';
 import { legendar, larguraVisual, cueEm, posicaoLegenda, separarDestaque } from './captions.js';
 import { renderizar, verificarCodecs, recortarJanela } from './render.js';
@@ -306,7 +306,9 @@ async function receber(files) {
     await etapa('cortar', 'Cortando', async () => { E.cortes = planejarCortes(E.clipes, E.preset); E.segmentos = montarSegmentos(E.clipes, E.cortes); });
     // onde ele "caçou" a frase (3+ refeituras encadeadas), a IA lê o trecho e fica só com a última tomada de cada ideia
     await etapa('revisar', 'Revisando', async () => {
-      E.revisao = await revisarTentativas(E.clipes, E.cortes, { aoProgredir: (n, m) => detalheEtapa('revisar', `${n} de ${m} trechos`), regras: E.regras, exemplos: E.exemplos });
+      const haCadeia = E.clipes.some((c, ci) => cadeiasDeTentativas(E.cortes, ci).some(x => x.length >= 3));
+      const exemplos = haCadeia ? await carregarExemplos() : [];
+      E.revisao = await revisarTentativas(E.clipes, E.cortes, { aoProgredir: (n, m) => detalheEtapa('revisar', `${n} de ${m} trechos`), regras: E.regras, exemplos });
       if (Object.keys(E.revisao).length) { E.cortes = planejarCortes(E.clipes, E.preset, E.revisao); E.segmentos = montarSegmentos(E.clipes, E.cortes); }
       detalheEtapa('revisar', '');
     });
@@ -1279,7 +1281,10 @@ async function carregarRegras() {
   catch { E.regras = ''; $('#regrasEstado').textContent = ''; }
   $('#regrasTexto').value = E.regras; $('#regrasTitulo').textContent = `Regras do ${E.preset.nome}`;
   $('#btDiario').href = `diario.html?professor=${E.professor}`;
-  try { const d = await (await fetch(`/api/feedback?professor=${E.professor}`, { cache: 'no-store' })).json(); E.exemplos = exemplosDoDiario(d.itens || []); } catch { E.exemplos = []; }
+}
+// o diário vira exemplos no prompt — lido só quando há trecho para a IA revisar (cada leitura é 1 list no KV)
+async function carregarExemplos() {
+  try { const d = await (await fetch(`/api/feedback?professor=${E.professor}`, { cache: 'no-store' })).json(); return exemplosDoDiario(d.itens || []); } catch { return []; }
 }
 // o diário vira exemplos curtos no prompt da revisão por IA: reportes de corte com trecho e cortes desligados com o porquê (12 mais recentes)
 function exemplosDoDiario(itens) {
@@ -1515,7 +1520,11 @@ async function iniciar() {
   const Q = new URLSearchParams(location.search);
   if (PROFESSORES.includes(Q.get('professor'))) E.professor = Q.get('professor');
   await carregarPresets();
-  try { const r = await (await fetch('/api/estado')).json(); $('#chipGroq').classList.add(r.groq ? 'ok' : 'falta'); if (!r.groq) $('#chipGroq').title = 'Falta a chave da Groq no servidor'; } catch { $('#chipGroq').classList.add('falta'); }
+  try {
+    const r = await (await fetch('/api/estado')).json(); $('#chipGroq').classList.add(r.groq ? 'ok' : 'falta'); if (!r.groq) $('#chipGroq').title = 'Falta a chave da Groq no servidor';
+    // Drive: só aparece quando está com problema — o robô, o visualizador e o «Aprovar» dependem dele
+    if (r.drive && r.drive !== 'ok' && r.drive !== 'sem-config') { const c = $('#chipDrive'); c.hidden = false; c.classList.add('falta'); c.lastChild.textContent = r.drive === 'vencido' ? 'Drive desconectado' : 'Drive com erro'; c.title = r.drive === 'vencido' ? 'O acesso ao Drive venceu. Robô, visualizador e «Aprovar» estão parados até reautorizar (robo/reautorizar.sh).' : 'O Drive respondeu com erro.'; }
+  } catch { $('#chipGroq').classList.add('falta'); }
   // o navegador precisa codificar H.264 e AAC (Chrome 94+, Safari 26+, Firefox 130+); avisa na hora, não na exportação
   try {
     const c = await verificarCodecs();

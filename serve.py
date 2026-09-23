@@ -268,7 +268,10 @@ class H(http.server.BaseHTTPRequestHandler):
         if self.path.startswith("/api/projetos"): return self._projetos("GET")
         caminho = urllib.parse.unquote(self.path.split("?")[0])
         if caminho == "/api/estado":
-            corpo = json.dumps({"groq": bool(chave_groq())}).encode()
+            try: token_drive(); drive = "ok"
+            except urllib.error.HTTPError as e: drive = "vencido" if b"invalid_grant" in e.read() else "erro"
+            except Exception: drive = "erro"
+            corpo = json.dumps({"groq": bool(chave_groq()), "drive": drive}).encode()
             self._cabecalhos(200, MIME[".json"], len(corpo))
             self.wfile.write(corpo)
             return
