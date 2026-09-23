@@ -12,3 +12,6 @@ id = "047e4bc566be4dafa4b27d399f421a18"
 # A pasta de entrega vem do projeto (fluxo.entrega.pastaId, escrita pelo robô a partir do robo.json); a var abaixo é só reserva.
 [vars]
 DRIVE_PASTA_PRONTOS_ID = ""
+# pastas cujo conteúdo o site pode ler do Drive (brutos e entrega de cada professor; «Em revisão» é subpasta dos brutos).
+# Mesmos ids de robo/pastas.json — professor novo entra nos dois.
+BANCADA_PASTAS = "1vew1VlJ1ExEd9Te0lnvSIoWzWfO4UPQ1,1oSEMar9FdA9U9ElLjE1FDsDQNSTGQryg,1s7q4fue8F8vy9ZFErlEkM1s_JJN4jovg,1vqgG8tueTgRae_-SHsEqafPxbOZcVNHD,1FP6IX_vziCr4aQOWr5yZwmW8L3Gi3SZR,1JdNkgFjIWwzj9dqsUB4t5ZYuCqXND9w0"

@@ -2,7 +2,7 @@
 //   GET  /api/drive/arquivo/<id>   → o arquivo em streaming (Range): o vídeo editado no visualizador, o bruto para reabrir a mesa
 //   GET  /api/drive/meta/<id>      → nome, tamanho
 //   POST /api/drive/entregar       → {professor, id, quem}: move o vídeo aprovado de «Em revisão» para a pasta de entrega (fluxo.entrega.pastaId) e marca o projeto
-import { configurado, token, meta, stream, mover, link, porNome, lixeira } from '../../_drive.js';
+import { configurado, token, meta, stream, mover, link, porNome, lixeira, daBancada } from '../../_drive.js';
 const SEM_CACHE = { 'Cache-Control': 'no-store' };
 const json = (o, status = 200) => Response.json(o, { status, headers: SEM_CACHE });
 const DRIVE_ID = /^[A-Za-z0-9_-]{10,80}$/, ID = /^[a-z0-9]{6,40}$/i, PROF = /^[a-z]{2,20}$/;
@@ -18,6 +18,7 @@ async function atender({ request, env, params }) {
     if (m !== 'GET' && m !== 'HEAD') return json({ erro: 'método' }, 405);
     if (!DRIVE_ID.test(id || '')) return json({ erro: 'id' }, 400);
     const tok = await token(env);
+    if (!(await daBancada(env, tok, id))) return json({ erro: 'arquivo fora das pastas da Bancada' }, 403);
     if (rota === 'meta') return json(await meta(tok, id));
     return stream(tok, id, request);
   }

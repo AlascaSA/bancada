@@ -53,3 +53,20 @@ export async function lixeira(tok, id) {
   if (!r.ok) throw new Error(`Drive lixeira ${r.status}: ${(await r.text()).slice(0, 200)}`);
 }
 export const link = id => `https://drive.google.com/file/d/${id}/view`;
+
+// Só arquivos da Bancada passam: o token é da conta inteira (escopo drive), então sem isso qualquer id do Drive dela
+// seria baixável pelo site. Vale: arquivo cuja pasta é uma das pastas da Bancada (BANCADA_PASTAS = brutos e entrega de
+// cada professor) ou uma subpasta direta delas («Em revisão», «proxy»). A decisão fica 1 h no cache do Cloudflare.
+export async function daBancada(env, tok, id) {
+  const permitidas = new Set(String(env.BANCADA_PASTAS || '').split(',').map(s => s.trim()).filter(Boolean));
+  if (!permitidas.size) return false;
+  const cache = caches.default, chave = new Request(`https://bancada-cache.invalid/permitido/${id}`);
+  const guardado = await cache.match(chave);
+  if (guardado) return (await guardado.text()) === '1';
+  const pais = async x => { const r = await fetch(`${API}/files/${x}?fields=parents&supportsAllDrives=true`, { headers: auth(tok) }); return r.ok ? (await r.json()).parents || [] : []; };
+  const p1 = await pais(id);
+  let ok = p1.some(p => permitidas.has(p));
+  if (!ok) for (const p of p1) if ((await pais(p)).some(q => permitidas.has(q))) { ok = true; break; }
+  await cache.put(chave, new Response(ok ? '1' : '0', { headers: { 'Cache-Control': 'public, max-age=3600' } }));
+  return ok;
+}
